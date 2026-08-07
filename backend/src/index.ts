@@ -3,6 +3,7 @@ import "./loadEnv";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { getStore } from "./lib/store";
+import { createNestApp } from "./app.nest";
 
 const rawPort = process.env["PORT"];
 
@@ -24,6 +25,15 @@ if (Number.isNaN(port) || port <= 0) {
     logger.info("Database initialized successfully");
   } catch (err) {
     logger.error({ err }, "Failed to initialize database");
+    process.exit(1);
+  }
+
+  try {
+    const { router: nestRouter } = await createNestApp();
+    app.use("/api/v2", nestRouter);
+    logger.info("NestJS API mounted at /api/v2");
+  } catch (err) {
+    logger.error({ err }, "Failed to initialize NestJS API");
     process.exit(1);
   }
 

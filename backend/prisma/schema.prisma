@@ -61,6 +61,7 @@ model User {
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[] @relation("UserAuditLogs")
   createdImports CsvImport[] @relation("UserCsvImports")
+  activationTokens ActivationToken[]
 
   @@map("users")
 }
@@ -338,6 +339,7 @@ model SyncConflict {
 model ActivationToken {
   id        String   @id @default(uuid())
   userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())

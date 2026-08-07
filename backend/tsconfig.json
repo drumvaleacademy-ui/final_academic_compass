@@ -5,15 +5,14 @@
     "tsBuildInfoFile": ".tsbuildinfo",
     "outDir": "dist",
     "rootDir": "src",
-    "types": ["node"]
+    "types": ["node"],
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
   },
-  "include": ["src"],
+  "include": ["src", "prisma"],
   "references": [
     {
       "path": "../lib/db"
-    },
-    {
-      "path": "../lib/api-zod"
     }
   ]
 }

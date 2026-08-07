@@ -1,0 +1,358 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PLATFORM_ADMIN
+  PRINCIPAL
+  SENIOR_TEACHER
+  TEACHER
+  PARENT
+  STUDENT
+}
+
+model School {
+  id            String    @id @default(uuid())
+  name          String
+  code          String    @unique
+  motto         String?
+  logoUrl       String?
+  emailDomains  String[]
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  users         User[]
+  classes       Class[]
+  subjects      Subject[]
+  exams         Exam[]
+  terms         Term[]
+  settings      SchoolSettings?
+  csvImports    CsvImport[]
+  smsLogs       SmsLog[]
+  auditLogs     AuditLog[]
+  timetableSlots TimetableSlot[]
+
+  @@map("schools")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  fullName      String
+  passwordHash  String?
+  phoneNumber   String?
+  isActive      Boolean   @default(true)
+  activatedAt   DateTime?
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  schoolId      String
+  school        School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  roles         UserRole[]
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[] @relation("UserAuditLogs")
+  createdImports CsvImport[] @relation("UserCsvImports")
+
+  @@map("users")
+}
+
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role
+  createdAt DateTime @default(now())
+
+  @@unique([userId, role])
+  @@map("user_roles")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+model SchoolSettings {
+  id            String   @id @default(uuid())
+  schoolId      String   @unique
+  school        School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  currentTermId String?
+  gradingScale  Json?
+  smsProvider   String?
+  smsSenderId   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("school_settings")
+}
+
+model Class {
+  id        String   @id @default(uuid())
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name      String
+  level     Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  streams   Stream[]
+  timetable TimetableSlot[]
+  exams     Exam[]
+  teacherAssignments TeacherClassAssignment[]
+  students  Student[]
+  sheets    MarkSheet[]
+}
+
+model Stream {
+  id        String   @id @default(uuid())
+  classId   String
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now())
+
+  students  Student[]
+  timetable TimetableSlot[]
+  sheets    MarkSheet[]
+}
+
+model Subject {
+  id          String   @id @default(uuid())
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name        String
+  code        String
+  isCore      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  timetable   TimetableSlot[]
+  sheets      MarkSheet[]
+  teacherAssignments TeacherSubjectAssignment[]
+}
+
+model TeacherSubjectAssignment {
+  id         String   @id @default(uuid())
+  userId     String
+  subjectId  String
+  subject    Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, subjectId])
+  @@map("teacher_subject_assignments")
+}
+
+model TeacherClassAssignment {
+  id             String   @id @default(uuid())
+  userId         String
+  classId        String
+  isClassTeacher Boolean  @default(false)
+  class          Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+
+  @@unique([userId, classId])
+  @@map("teacher_class_assignments")
+}
+
+model Parent {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  createdBy String
+  createdAt DateTime @default(now())
+
+  children  StudentParent[]
+}
+
+model StudentParent {
+  id        String   @id @default(uuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  parentId  String
+  parent    Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Student {
+  id            String   @id @default(uuid())
+  schoolId      String
+  admissionNo   String
+  fullName      String
+  gender        String
+  dateOfBirth   DateTime?
+  classId       String
+  streamId      String
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  class         Class     @relation(fields: [classId], references: [id], onDelete: Restrict)
+  stream        Stream    @relation(fields: [streamId], references: [id], onDelete: Restrict)
+  marks         MarkEntry[]
+  parents       StudentParent[]
+}
+
+model Term {
+  id        String   @id @default(uuid())
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  exams Exam[]
+}
+
+model Exam {
+  id          String   @id @default(uuid())
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classId     String
+  class       Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  termId      String
+  term        Term     @relation(fields: [termId], references: [id], onDelete: Restrict)
+  name        String
+  year        Int
+  outOf       Int      @default(100)
+  status      String   @default("draft")
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sheets MarkSheet[]
+}
+
+model MarkSheet {
+  id          String   @id @default(uuid())
+  examId      String
+  exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  classId     String
+  class       Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  streamId    String
+  stream      Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherId   String
+  status      String   @default("draft")
+  locked      Boolean  @default(false)
+  comment     String?
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  entries     MarkEntry[]
+}
+
+model MarkEntry {
+  id        String   @id @default(uuid())
+  sheetId   String
+  sheet     MarkSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  score     Int?
+  updatedAt DateTime @default(now()) @updatedAt
+  updatedBy String
+}
+
+model TimetableSlot {
+  id        String   @id @default(uuid())
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classId   String
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  streamId  String?
+  stream    Stream?  @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  dayOfWeek Int
+  period    Int
+  startTime String
+  endTime   String
+  subjectId String?
+  subject   Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  teacherId String?
+  room      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  userId    String
+  actor     User     @relation("UserAuditLogs", fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String
+  oldValue  Json?
+  newValue  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+}
+
+model SmsLog {
+  id         String   @id @default(uuid())
+  schoolId   String
+  school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  recipient  String
+  message    String
+  provider   String
+  status     String
+  providerId String?
+  error      String?
+  sentAt     DateTime @default(now())
+}
+
+model SyncConflict {
+  id             String   @id @default(uuid())
+  entity         String
+  entityId       String
+  field          String
+  serverValue    String?
+  incomingValue  String?
+  incomingBy     String?
+  incomingDevice String?
+  status         String   @default("pending")
+  resolution     String?
+  customValue    String?
+  createdAt      DateTime @default(now())
+  resolvedAt     DateTime?
+
+  @@map("sync_conflicts")
+}
+
+model ActivationToken {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model CsvImport {
+  id           String   @id @default(uuid())
+  schoolId     String
+  school       School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  entity       String
+  fileName     String
+  importedBy   String
+  importer     User     @relation("UserCsvImports", fields: [importedBy], references: [id])
+  successCount Int
+  failureCount Int
+  errors       Json
+  createdAt    DateTime @default(now())
+}

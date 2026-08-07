@@ -7,12 +7,24 @@
         "dev": "node ./build.mjs && node --enable-source-maps ./dist/index.mjs",
         "build": "node ./build.mjs",
         "start": "node --enable-source-maps ./dist/index.mjs",
-        "typecheck": "tsc -p tsconfig.json --noEmit"
+        "typecheck": "tsc -p tsconfig.json --noEmit",
+        "prisma:generate": "prisma generate",
+        "prisma:migrate": "prisma migrate deploy",
+        "prisma:studio": "prisma studio",
+        "nest:dev": "tsx watch src/app.nest.ts",
+        "nest:build": "tsc -p tsconfig.json",
+        "nest:start": "node dist/app.nest.js"
     },
     "dependencies": {
-        "@workspace/api-zod": "workspace:*",
+        "@nestjs/common": "^11.0.1",
+        "@nestjs/config": "^4.0.4",
+        "@nestjs/core": "^11.0.1",
+        "@nestjs/platform-express": "^11.0.1",
+        "@prisma/client": "^6.6.0",
         "@supabase/supabase-js": "^2.49.8",
         "bcryptjs": "^3.0.3",
+        "class-transformer": "^0.5.1",
+        "class-validator": "^0.14.1",
         "cookie-parser": "^1.4.7",
         "cors": "^2.8.6",
         "express": "^5.2.1",
@@ -20,9 +32,14 @@
         "pg": "^8.16.0",
         "pino": "^9.14.0",
         "pino-http": "^10.5.0",
+        "reflect-metadata": "^0.2.2",
+        "rxjs": "^7.8.1",
         "zod": "catalog:"
     },
     "devDependencies": {
+        "@nestjs/cli": "^11.0.0",
+        "@nestjs/schematics": "^11.0.0",
+        "@nestjs/testing": "^11.0.1",
         "@types/bcryptjs": "^3.0.0",
         "@types/cookie-parser": "^1.4.10",
         "@types/cors": "^2.8.19",
@@ -34,6 +51,7 @@
         "esbuild": "0.27.3",
         "esbuild-plugin-pino": "^2.3.3",
         "pino-pretty": "^13.1.3",
+        "prisma": "^6.6.0",
         "thread-stream": "3.1.0"
     }
 }

@@ -91,7 +91,7 @@ export default function Profile() {
 
   const handleApprovalToggle = async (userId: string, currentlyApproved: boolean) => {
     try {
-      await api.post("/auth/set-approval", { userId, approved: !currentlyApproved });
+      await api.post("/v2/auth/set-approval", { userId, approved: !currentlyApproved });
       toast.success(!currentlyApproved ? "Staff member approved." : "Staff access revoked.");
       setProfiles(prev => prev.map(p => p.id === userId ? { ...p, approved: !currentlyApproved } : p));
     } catch (err: unknown) {
@@ -103,7 +103,7 @@ export default function Profile() {
   const handleRoleToggle = async (userId: string, targetRole: string, hasRole: boolean) => {
     const action = hasRole ? "remove" : "add";
     try {
-      await api.post("/auth/assign-role", { userId, role: targetRole, action });
+      await api.post("/v2/auth/assign-role", { userId, role: targetRole, action });
       toast.success("Role assignment updated successfully.");
       setProfiles(prev => prev.map(p => {
         if (p.id !== userId) return p;
@@ -135,7 +135,7 @@ export default function Profile() {
     e.preventDefault();
     setPasswordBusy(true);
     try {
-      await api.post("/auth/change-password", { currentPassword, newPassword });
+      await api.post("/v2/auth/change-password", { currentPassword, newPassword });
       toast.success("Password changed successfully");
       setChangeOpen(false);
       setCurrentPassword("");
@@ -153,7 +153,7 @@ export default function Profile() {
     if (!resetTarget) return;
     setPasswordBusy(true);
     try {
-      await api.post("/auth/admin-reset-password", { userId: resetTarget.id, newPassword: resetNewPassword });
+      await api.post("/v2/auth/admin-reset-password", { userId: resetTarget.id, newPassword: resetNewPassword });
       toast.success(`Password reset for ${resetTarget.full_name || resetTarget.email}`);
       setResetOpen(false);
       setResetTarget(null);

@@ -133,7 +133,7 @@ export async function resolveRemoteConflict(
   resolution: "server" | "this" | "custom",
   customValue?: string
 ) {
-  await api.patch(`/conflicts/${encodeURIComponent(id)}`, {
+  await api.patch(`/v2/conflicts/${encodeURIComponent(id)}`, {
     resolution,
     custom_value: customValue ?? null,
   });
@@ -141,7 +141,7 @@ export async function resolveRemoteConflict(
 
 export async function pushTimetableSlots(locals: Array<RemoteTimetableSlot & { _isNew?: boolean }>): Promise<Array<{ id: string; status: "ok" | "conflict" | "error" | "forbidden" }>> {
   try {
-    const result = await api.post<{ results: Array<{ id: string; status: "ok" | "conflict" }> }>("/timetable-slots/batch", {
+    const result = await api.post<{ results: Array<{ id: string; status: "ok" | "conflict" }> }>("/v2/timetable/batch", {
       slots: locals.map(l => ({
         id: l.id,
         curriculum_id: l.curriculum_id,
@@ -173,12 +173,12 @@ export async function pushTimetableSlot(
 }
 
 export async function deleteTimetableSlot(id: string) {
-  await api.delete(`/timetable-slots/${encodeURIComponent(id)}`);
+  await api.delete(`/v2/timetable/${encodeURIComponent(id)}`);
 }
 
 export async function pushSchoolSnapshot(local: SchoolSnapshot): Promise<"ok" | "error"> {
   try {
-    await api.post("/sync", local);
+    await api.post("/v2/sync", local);
     return "ok";
   } catch {
     return "error";

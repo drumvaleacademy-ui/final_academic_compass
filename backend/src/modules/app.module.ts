@@ -16,6 +16,8 @@ import { ReportsModule } from "./reports/reports.module";
 import { SmsModule } from "./sms/sms.module";
 import { AuditModule } from "./audit/audit.module";
 import { ImportsModule } from "./imports/imports.module";
+import { ConflictsModule } from "./conflicts/conflicts.module";
+import { SyncModule } from "./sync/sync.module";
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { ImportsModule } from "./imports/imports.module";
     SmsModule,
     AuditModule,
     ImportsModule,
+    ConflictsModule,
+    SyncModule,
   ],
 })
 export class AppModule {}

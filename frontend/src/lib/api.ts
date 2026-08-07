@@ -3,7 +3,7 @@
  */
 
 const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN ?? "").replace(/\/$/, "");
-const BASE = API_ORIGIN ? `${API_ORIGIN}/api` : "/api";
+const BASE = API_ORIGIN ? `${API_ORIGIN}/api/v2` : "/api/v2";
 
 function isNetworkError(err: unknown): boolean {
   return (

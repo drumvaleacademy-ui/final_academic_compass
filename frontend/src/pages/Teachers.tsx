@@ -101,7 +101,7 @@ export default function Teachers() {
   const remove = async (id: string) => {
     if (!isPrincipal) { toast.error("Only the Principal can manage the staff directory"); return; }
     try {
-      await api.delete(`/auth/profiles/${id}`);
+      await api.delete(`/v2/auth/profiles/${id}`);
       toast.success("Staff member removed.");
       setBackendProfiles(prev => prev.filter(p => p.id !== id));
     } catch (err: unknown) {
@@ -169,7 +169,7 @@ export default function Teachers() {
 
   const handleApprovalToggle = async (userId: string, currentlyApproved: boolean) => {
     try {
-      await api.post("/auth/set-approval", { userId, approved: !currentlyApproved });
+      await api.post("/v2/auth/set-approval", { userId, approved: !currentlyApproved });
       toast.success(!currentlyApproved ? "Staff member approved." : "Staff access revoked.");
       setBackendProfiles(prev => prev.map(p => p.id === userId ? { ...p, approved: !currentlyApproved } : p));
     } catch (err: unknown) {
@@ -181,7 +181,7 @@ export default function Teachers() {
   const handleRoleToggle = async (userId: string, targetRole: string, hasRole: boolean) => {
     const action = hasRole ? "remove" : "add";
     try {
-      await api.post("/auth/assign-role", { userId, role: targetRole, action });
+      await api.post("/v2/auth/assign-role", { userId, role: targetRole, action });
       toast.success("Role assignment updated successfully.");
       setBackendProfiles(prev => prev.map(p => {
         if (p.id !== userId) return p;

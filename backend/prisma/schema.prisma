@@ -320,6 +320,7 @@ model SmsLog {
 
 model SyncConflict {
   id             String   @id @default(uuid())
+  schoolId       String
   entity         String
   entityId       String
   field          String

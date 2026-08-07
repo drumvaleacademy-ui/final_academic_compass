@@ -283,4 +283,74 @@ export class AuthService {
 
     return { message: "Account activated successfully" };
   }
+
+  async listProfiles(schoolId: string) {
+    const users = await this.prisma.user.findMany({
+      where: { schoolId },
+      include: { roles: true },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return users.map((u) => ({
+      id: u.id,
+      email: u.email,
+      full_name: u.fullName,
+      department: null,
+      approved: u.isActive,
+      created_at: u.createdAt.toISOString(),
+      roles: u.roles.map((r) => r.role),
+    }));
+  }
+
+  async deleteProfile(schoolId: string, userId: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, schoolId },
+    });
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    await this.prisma.user.delete({ where: { id: userId } });
+    return { ok: true };
+  }
+
+  async setApproval(schoolId: string, userId: string, approved: boolean) {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, schoolId },
+    });
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { isActive: approved, activatedAt: approved ? new Date() : null },
+    });
+
+    return { ok: true };
+  }
+
+  async assignRole(schoolId: string, userId: string, role: string, action: "add" | "remove") {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, schoolId },
+    });
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    if (action === "add") {
+      await this.prisma.userRole.create({
+        data: { userId, role: role as any },
+      }).catch(() => {});
+    } else {
+      await this.prisma.userRole.deleteMany({
+        where: { userId, role: role as any },
+      });
+    }
+
+    return { ok: true };
+  }
 }

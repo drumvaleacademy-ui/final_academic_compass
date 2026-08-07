@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, UseGuards, Req, HttpCode, HttpStatus } from "@nestjs/common";
+import { Controller, Post, Get, Delete, Body, UseGuards, Req, HttpCode, HttpStatus, Param } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { AuthGuard, RolesGuard, Roles } from "../../core/guards/nestjs.guards";
 
@@ -22,6 +22,37 @@ export class AuthController {
   @UseGuards(AuthGuard)
   async me(@Req() req: any) {
     return this.authService.me(req.user.id);
+  }
+
+  @Get("profiles")
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles("PLATFORM_ADMIN", "PRINCIPAL")
+  async profiles(@Req() req: any) {
+    return this.authService.listProfiles(req.user.schoolId);
+  }
+
+  @Delete("profiles/:id")
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles("PLATFORM_ADMIN", "PRINCIPAL")
+  @HttpCode(HttpStatus.OK)
+  async deleteProfile(@Req() req: any, @Param("id") id: string) {
+    return this.authService.deleteProfile(req.user.schoolId, id);
+  }
+
+  @Post("set-approval")
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles("PLATFORM_ADMIN", "PRINCIPAL")
+  @HttpCode(HttpStatus.OK)
+  async setApproval(@Req() req: any, @Body() body: any) {
+    return this.authService.setApproval(req.user.schoolId, body.userId, body.approved);
+  }
+
+  @Post("assign-role")
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles("PLATFORM_ADMIN", "PRINCIPAL")
+  @HttpCode(HttpStatus.OK)
+  async assignRole(@Req() req: any, @Body() body: any) {
+    return this.authService.assignRole(req.user.schoolId, body.userId, body.role, body.action);
   }
 
   @Post("forgot-password")

@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import { api } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 
-export type AppRole = "admin" | "principal" | "hod" | "class_teacher" | "subject_teacher" | "teacher" | "senior_teacher";
+export type AppRole = "PLATFORM_ADMIN" | "PRINCIPAL" | "SENIOR_TEACHER" | "TEACHER" | "PARENT" | "STUDENT" | "HOD";
 
 export interface AuthUser {
   id: string;
@@ -23,12 +23,10 @@ interface AuthCtx {
   roles: AppRole[];
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, full_name?: string, department?: string) => Promise<void>;
   signOut: () => Promise<void>;
   hasRole: (...r: AppRole[]) => boolean;
   refreshRoles: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  canEditTimetable: boolean;
   isTeacher: boolean;
   isSeniorTeacher: boolean;
   isHod: boolean;
@@ -38,6 +36,7 @@ interface AuthCtx {
   canManageStaff: boolean;
   canManageStudents: boolean;
   canEnterMarks: boolean;
+  canEditTimetable: boolean;
 }
 
 const Ctx = createContext<AuthCtx | null>(null);
@@ -82,23 +81,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!session) { setLoading(false); return; }
-    api.get<AppRole[]>("/auth/roles")
+    api.get<AppRole[]>("/v2/auth/roles")
       .then(setRoles)
       .catch(() => setRoles([]))
       .finally(() => setLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.token]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { token, user } = await api.post<{ token: string; user: AuthUser }>(
-      "/auth/signin", { email, password }
-    );
-    storeSession(token, user);
-  }, []);
-
-  const signUp = useCallback(async (email: string, password: string, full_name?: string, department?: string) => {
-    const { token, user } = await api.post<{ token: string; user: AuthUser }>(
-      "/auth/signup", { email, password, full_name, department }
+      "/v2/auth/signin", { email, password }
     );
     storeSession(token, user);
   }, []);
@@ -112,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshRoles = useCallback(async () => {
     if (!session) return;
     try {
-      const updatedRoles = await api.get<AppRole[]>("/auth/roles");
+      const updatedRoles = await api.get<AppRole[]>("/v2/auth/roles");
       setRoles(updatedRoles);
     } catch (_e) {}
   }, [session]);
@@ -120,27 +111,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshProfile = useCallback(async () => {
     if (!session) return;
     try {
-      const me = await api.get<{ department: string | null; approved: boolean; full_name: string | null }>("/auth/me");
+      const me = await api.get<{ department: string | null; approved: boolean; full_name: string | null }>("/v2/auth/me");
       updateStoredUser({ department: me.department, approved: me.approved, full_name: me.full_name });
     } catch (_e) {}
   }, [session]);
 
-  const isPrincipal = hasRole("admin", "principal");
-  const canEditTimetable = isPrincipal || hasRole("senior_teacher");
-  const isTeacher = hasRole("teacher", "subject_teacher", "class_teacher");
-  const isSeniorTeacher = hasRole("senior_teacher");
-  const isHod = hasRole("hod");
+  const isPrincipal = hasRole("PLATFORM_ADMIN", "PRINCIPAL");
+  const isTeacher = hasRole("TEACHER", "SENIOR_TEACHER");
+  const isSeniorTeacher = hasRole("SENIOR_TEACHER");
+  const isHod = hasRole("HOD");
   const isApproved = isPrincipal || !!session?.user?.approved;
   const isReadOnly = !isApproved && roles.length === 0;
   const canManageStaff = isPrincipal;
-  const canManageStudents = isPrincipal || hasRole("senior_teacher");
+  const canManageStudents = isPrincipal || isSeniorTeacher;
   const canEnterMarks = isPrincipal || isSeniorTeacher || isTeacher || isHod;
+  const canEditTimetable = isPrincipal || isSeniorTeacher || isHod;
 
   return (
     <Ctx.Provider value={{
       session, user: session?.user ?? null, roles, loading,
-      signIn, signUp, signOut, hasRole, refreshRoles, refreshProfile, canEditTimetable,
-      isTeacher, isSeniorTeacher, isHod, isPrincipal, isApproved, isReadOnly, canManageStaff, canManageStudents, canEnterMarks,
+      signIn, signOut, hasRole, refreshRoles, refreshProfile,
+      isTeacher, isSeniorTeacher, isHod, isPrincipal, isApproved, isReadOnly,
+      canManageStaff, canManageStudents, canEnterMarks, canEditTimetable,
     }}>
       {children}
     </Ctx.Provider>

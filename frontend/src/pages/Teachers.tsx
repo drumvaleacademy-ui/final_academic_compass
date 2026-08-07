@@ -28,13 +28,10 @@ interface BackendProfile {
 }
 
 const ALL_ROLES = [
-  { value: "admin", label: "Admin" },
-  { value: "principal", label: "Principal" },
-  { value: "hod", label: "Head of Department" },
-  { value: "class_teacher", label: "Class Teacher" },
-  { value: "subject_teacher", label: "Subject Teacher" },
-  { value: "teacher", label: "Teacher" },
-  { value: "senior_teacher", label: "Senior Teacher" },
+  { value: "PLATFORM_ADMIN", label: "Platform Admin" },
+  { value: "PRINCIPAL", label: "Principal" },
+  { value: "SENIOR_TEACHER", label: "Senior Teacher" },
+  { value: "TEACHER", label: "Teacher" },
 ] as const;
 
 export default function Teachers() {
@@ -63,7 +60,7 @@ export default function Teachers() {
     if (!isPrincipal) return;
     setLoadingProfiles(true);
     try {
-      const data = await api.get<BackendProfile[]>("/auth/profiles");
+      const data = await api.get<BackendProfile[]>("/v2/auth/profiles");
       const sorted = Array.isArray(data) ? data : [];
       sorted.sort((a, b) => Number(a.approved) - Number(b.approved) || a.full_name?.localeCompare(b.full_name || "") || 0);
       setBackendProfiles(sorted);
@@ -81,7 +78,7 @@ export default function Teachers() {
   const add = async () => {
     if (!isPrincipal) { toast.error("Only the Principal can manage the staff directory"); return; }
     try {
-      const res = await api.post<{ id: string; email: string; full_name: string | null; department: string | null; roles: string[]; temp_password: string }>("/auth/create-staff", {
+      const res = await api.post<{ id: string; email: string; full_name: string | null; department: string | null; roles: string[]; temp_password: string }>("/v2/auth/teachers", {
         email: email || `new.teacher.${Date.now()}@school.ac.ke`,
         full_name: name || "New Teacher",
         department: department || undefined,
@@ -141,8 +138,8 @@ export default function Teachers() {
           const email = String(row.Email || row.email || "").trim();
           if (!email) continue;
           try {
-            const role = (["admin", "principal", "class_teacher", "subject_teacher", "teacher", "senior_teacher", "hod"].includes(String(row.Role || row.role)) ? String(row.Role || row.role) : "subject_teacher");
-            const res = await api.post<{ id: string }>("/auth/create-staff", {
+            const role = (["PLATFORM_ADMIN", "PRINCIPAL", "SENIOR_TEACHER", "TEACHER"].includes(String(row.Role || row.role)) ? String(row.Role || row.role) : "TEACHER");
+            const res = await api.post<{ id: string }>("/v2/auth/teachers", {
               email,
               full_name: String(row.Name || row.FullName || row.full_name || "").trim() || "Imported Staff",
               department: String(row.Department || row.department || "").trim() || undefined,

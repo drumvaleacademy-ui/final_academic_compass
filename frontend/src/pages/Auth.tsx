@@ -5,27 +5,20 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { School, KeyRound, Chrome } from "lucide-react";
+import { School, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/store/auth";
-import { DEPARTMENTS } from "@/lib/schoolData";
-import { supabase } from "@/lib/supabase";
 import Loading from "@/components/Loading";
 
 export default function Auth() {
-  const [mode, setMode]             = useState<"signin" | "signup">("signin");
   const [email, setEmail]           = useState("");
   const [password, setPassword]     = useState("");
-  const [name, setName]             = useState("");
-  const [department, setDepartment] = useState<string>("");
   const [busy, setBusy]             = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotPassword, setForgotPassword] = useState("");
   const [forgotBusy, setForgotBusy] = useState(false);
   const nav = useNavigate();
-  const { session, loading, signIn, signUp } = useAuth();
+  const { session, loading, signIn } = useAuth();
 
   useEffect(() => {
     if (!loading && session) nav("/", { replace: true });
@@ -35,12 +28,7 @@ export default function Auth() {
     e.preventDefault();
     setBusy(true);
     try {
-      if (mode === "signup") {
-        await signUp(email, password, name || undefined, department || undefined);
-        toast.success("Account created. You can now sign in.");
-      } else {
-        await signIn(email, password);
-      }
+      await signIn(email, password);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Authentication failed";
       toast.error(message);
@@ -53,39 +41,21 @@ export default function Auth() {
     e.preventDefault();
     setForgotBusy(true);
     try {
-      const res = await fetch("/api/auth/forgot-password", {
+      const res = await fetch("/api/v2/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: forgotEmail, newPassword: forgotPassword }),
+        body: JSON.stringify({ email: forgotEmail }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to reset password");
-      toast.success(data.message || "Password reset successfully");
+      toast.success(data.message || "If an account exists, a reset link has been sent.");
       setForgotOpen(false);
       setForgotEmail("");
-      setForgotPassword("");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to reset password";
       toast.error(message);
     } finally {
       setForgotBusy(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setBusy(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-      if (error) throw error;
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Google sign-in failed";
-      toast.error(message);
-      setBusy(false);
     }
   };
 
@@ -106,30 +76,6 @@ export default function Auth() {
         </div>
 
         <form onSubmit={submit} className="space-y-3">
-          {mode === "signup" && (
-            <>
-              <Input
-                placeholder="Full name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-              />
-              <div>
-                <Select value={department} onValueChange={setDepartment}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DEPARTMENTS.map((d) => (
-                      <SelectItem key={d} value={d}>{d}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  Helps the Principal review and approve your role faster.
-                </p>
-              </div>
-            </>
-          )}
           <Input
             type="email"
             placeholder="Email"
@@ -143,54 +89,21 @@ export default function Auth() {
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
-            minLength={6}
           />
           <Button type="submit" className="w-full" disabled={busy}>
-            {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}
-          </Button>
-
-          <div className="relative my-3">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t"></div>
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            disabled={busy}
-            onClick={handleGoogleSignIn}
-          >
-            <Chrome className="h-4 w-4 mr-2" /> Google
+            {busy ? "Please wait…" : "Sign in"}
           </Button>
         </form>
 
         <div className="mt-4 text-xs text-center text-muted-foreground">
-          {mode === "signin" ? "No account?" : "Already have an account?"}{" "}
           <button
             type="button"
-            className="text-primary underline"
-            onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+            className="text-blue-900 hover:underline inline-flex items-center gap-1"
+            onClick={() => setForgotOpen(true)}
           >
-            {mode === "signin" ? "Create one" : "Sign in"}
+            <KeyRound className="h-3.5 w-3.5" /> Forgot password?
           </button>
         </div>
-
-        {mode === "signin" && (
-          <p className="text-center text-gray-600 text-sm mt-3">
-            <button
-              type="button"
-              className="text-blue-900 hover:underline inline-flex items-center gap-1"
-              onClick={() => setForgotOpen(true)}
-            >
-              <KeyRound className="h-3.5 w-3.5" /> Forgot password?
-            </button>
-          </p>
-        )}
 
         <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
           <DialogContent>
@@ -199,7 +112,7 @@ export default function Auth() {
                 <KeyRound className="h-5 w-5" /> Reset Password
               </DialogTitle>
               <DialogDescription>
-                Enter your registered email address and choose a new password.
+                Enter your registered email address to receive a password reset link.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleForgotPassword} className="space-y-4">
@@ -214,30 +127,17 @@ export default function Auth() {
                   disabled={forgotBusy}
                 />
               </div>
-              <div>
-                <Label htmlFor="forgot-password">New Password</Label>
-                <Input
-                  id="forgot-password"
-                  type="password"
-                  value={forgotPassword}
-                  onChange={(e) => setForgotPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  disabled={forgotBusy}
-                />
-              </div>
               <Button type="submit" className="w-full" disabled={forgotBusy}>
-                {forgotBusy ? "Resetting..." : "Reset Password"}
+                {forgotBusy ? "Sending…" : "Send Reset Link"}
               </Button>
             </form>
           </DialogContent>
         </Dialog>
 
         <p className="mt-3 text-[11px] text-muted-foreground text-center">
-          The first account created becomes Principal (full access). Every other
-          account needs Principal approval before it can access the system.
+          Contact your Principal for account access. Teacher accounts are created by the school administration.
         </p>
-          </Card>
+        </Card>
         )}
       </div>
     );

@@ -1,22 +1,13 @@
 {
   "version": 2,
   "framework": null,
-  "installCommand": "pnpm install",
-  "build": {
-    "env": {
-      "DATABASE_URL": "@database_url",
-      "SESSION_SECRET": "@session_secret",
-      "SUPABASE_URL": "@supabase_url",
-      "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
-      "SEED_ADMINS": "@seed_admins"
-    }
-  },
+  "installCommand": "pnpm install --frozen-lockfile",
   "builds": [
     {
       "src": "dist/index.mjs",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["dist/**", "prisma/**", ".env"],
+        "includeFiles": ["dist/**", "backend/prisma/**"],
         "maxLambdaSize": "50mb"
       }
     }
@@ -27,13 +18,5 @@
       "dest": "/dist/index.mjs",
       "methods": ["GET", "POST", "PUT", "PATCH", "DELETE"]
     }
-  ],
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "SESSION_SECRET": "@session_secret",
-    "SUPABASE_URL": "@supabase_url",
-    "SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
-    "SEED_ADMINS": "@seed_admins"
-  }
+  ]
 }

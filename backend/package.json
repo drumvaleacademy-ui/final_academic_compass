@@ -6,6 +6,7 @@
     "scripts": {
         "dev": "node ./build.mjs && node --enable-source-maps ./dist/index.mjs",
         "build": "node ./build.mjs",
+        "vercel-build": "npx prisma generate && npx prisma db push --skip-generate && node ./build.mjs && node --enable-source-maps ./dist/seed.mjs",
         "start": "node --enable-source-maps ./dist/index.mjs",
         "seed": "node --enable-source-maps ./dist/seed.mjs",
         "typecheck": "tsc -p tsconfig.json --noEmit",

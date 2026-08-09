@@ -25,32 +25,5 @@
       "dest": "/frontend/dist/public/index.html",
       "method": ["GET"]
     }
-  ],
-  "env": {
-    "SESSION_SECRET": "@vercel_env_SESSION_SECRET",
-    "DATABASE_URL": "@vercel_env_DATABASE_URL",
-    "SUPABASE_URL": "@vercel_env_SUPABASE_URL",
-    "SUPABASE_SERVICE_ROLE_KEY": "@vercel_env_SUPABASE_SERVICE_ROLE_KEY",
-    "FRONTEND_URL": "@vercel_env_FRONTEND_URL",
-    "APP_DOMAIN": "@vercel_env_APP_DOMAIN",
-    "API_DOMAIN": "@vercel_env_API_DOMAIN",
-    "SMTP_HOST": "@vercel_env_SMTP_HOST",
-    "SMTP_PORT": "@vercel_env_SMTP_PORT",
-    "SMTP_USER": "@vercel_env_SMTP_USER",
-    "SMTP_PASS": "@vercel_env_SMTP_PASS",
-    "EMAIL_FROM": "@vercel_env_EMAIL_FROM",
-    "SMS_PROVIDER": "@vercel_env_SMS_PROVIDER",
-    "SMS_API_KEY": "@vercel_env_SMS_API_KEY",
-    "SMS_SENDER_ID": "@vercel_env_SMS_SENDER_ID",
-    "SMS_PROVIDER_URL": "@vercel_env_SMS_PROVIDER_URL",
-    "TEACHER_EMAIL_DOMAINS": "@vercel_env_TEACHER_EMAIL_DOMAINS"
-  },
-  "build": {
-    "env": {
-      "SESSION_SECRET": "@vercel_env_SESSION_SECRET",
-      "DATABASE_URL": "@vercel_env_DATABASE_URL",
-      "SUPABASE_URL": "@vercel_env_SUPABASE_URL",
-      "SUPABASE_SERVICE_ROLE_KEY": "@vercel_env_SUPABASE_SERVICE_ROLE_KEY"
-    }
-  }
+  ]
 }

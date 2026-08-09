@@ -21,7 +21,10 @@ async function buildAll() {
   });
 
   await esbuild({
-    entryPoints: [path.resolve(tmpDir, "index.js")],
+    entryPoints: [
+      path.resolve(tmpDir, "index.js"),
+      path.resolve(tmpDir, "seed.js"),
+    ],
     platform: "node",
     bundle: true,
     format: "esm",

@@ -2,12 +2,13 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, GraduationCap, BookOpen, UserSquare, ClipboardList,
   FileSpreadsheet, PencilLine, GitMerge, LineChart, Printer, Settings,
-  Wifi, WifiOff, RefreshCw, School, User, LogOut, CalendarDays, Menu, ChevronDown,
+  Wifi, WifiOff, RefreshCw, User, LogOut, CalendarDays, Menu, ChevronDown,
 } from "lucide-react";
 import { useState } from "react";
 import { useSchool } from "@/store/school";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
+import { SchoolLogoIcon } from "@/components/SchoolLogo";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -115,12 +116,10 @@ export default function AppShell() {
   const SidebarContent = () => (
     <>
       <div className="px-5 py-4 flex items-center gap-2 border-b border-sidebar-border">
-        <div className="h-9 w-9 rounded-md bg-sidebar-primary text-sidebar-primary-foreground grid place-items-center">
-          <School className="h-5 w-5" />
-        </div>
+        <SchoolLogoIcon size="md" />
         <div>
           <div className="text-sm font-semibold">Academic Compass</div>
-          <div className="text-[11px] text-sidebar-foreground/70">Academic Ops</div>
+          <div className="text-[11px] text-sidebar-foreground/70">{state.settings.schoolTag}</div>
         </div>
       </div>
       <nav className="flex-1 overflow-y-auto py-3">
@@ -164,17 +163,13 @@ export default function AppShell() {
               <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)} className="h-8 w-8">
                 <Menu className="h-5 w-5" />
               </Button>
-              <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground grid place-items-center">
-                <School className="h-4 w-4" />
-              </div>
+              <SchoolLogoIcon size="sm" />
               <div className="text-sm font-semibold">Academic Compass</div>
             </div>
 
             {/* Desktop logo */}
             <div className="hidden lg:flex items-center gap-2">
-              <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground grid place-items-center">
-                <School className="h-4 w-4" />
-              </div>
+              <SchoolLogoIcon size="sm" />
               <div className="text-sm font-semibold">Academic Compass</div>
             </div>
 
@@ -357,11 +352,9 @@ export default function AppShell() {
         <div className="px-4 lg:px-6 py-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded bg-primary/10 text-primary grid place-items-center">
-                <School className="h-3 w-3" />
-              </div>
+              <SchoolLogoIcon size="sm" />
               <span className="text-xs text-muted-foreground">
-                Academic Compass · {state.settings.schoolName} · v1.0
+                Academic Compass · {state.settings.schoolTag}
               </span>
             </div>
             <nav className="flex flex-wrap items-center gap-1">

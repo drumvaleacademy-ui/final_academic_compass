@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { School } from "lucide-react";
+import { SchoolLogoIcon } from "@/components/SchoolLogo";
 
 export default function Loading() {
   const [progress, setProgress] = useState(0);
@@ -53,7 +53,7 @@ export default function Loading() {
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <School className="h-8 w-8 text-primary" />
+            <SchoolLogoIcon size="lg" />
           </div>
         </div>
 

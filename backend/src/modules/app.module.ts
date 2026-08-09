@@ -14,6 +14,7 @@ import { MarksModule } from "./marks/marks.module";
 import { TimetableModule } from "./timetable/timetable.module";
 import { ReportsModule } from "./reports/reports.module";
 import { SmsModule } from "./sms/sms.module";
+import { EmailModule } from "./email/email.module";
 import { AuditModule } from "./audit/audit.module";
 import { ImportsModule } from "./imports/imports.module";
 import { ConflictsModule } from "./conflicts/conflicts.module";
@@ -36,6 +37,7 @@ import { SyncModule } from "./sync/sync.module";
     TimetableModule,
     ReportsModule,
     SmsModule,
+    EmailModule,
     AuditModule,
     ImportsModule,
     ConflictsModule,

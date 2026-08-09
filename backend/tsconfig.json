@@ -10,9 +10,5 @@
     "experimentalDecorators": true
   },
   "include": ["src", "prisma"],
-  "references": [
-    {
-      "path": "../lib/db"
-    }
-  ]
+  "references": []
 }

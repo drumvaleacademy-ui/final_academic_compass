@@ -37,7 +37,9 @@ minimumReleaseAgeExclude:
 packages:
   - frontend
   - backend
-  - lib/*
+  - lib/api-client-react
+  - lib/api-spec
+  - lib/api-zod
   - lib/integrations/*
   - scripts
 
@@ -158,3 +160,6 @@ overrides:
 allowBuilds:
   better-sqlite3: true
   esbuild: true
+  "@prisma/client": true
+  "@prisma/engines": true
+  prisma: true

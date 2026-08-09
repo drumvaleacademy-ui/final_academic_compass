@@ -1,16 +1,10 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from "@nestjs/common";
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException, SetMetadata } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { prisma } from "../../core/prisma.service";
+import { prisma, PrismaService } from "../../core/prisma.service";
+import jwt from "jsonwebtoken";
 
 export const ROLES_KEY = "roles";
-export const Roles = (...roles: string[]) => (target: any, key?: any, descriptor?: any) => {
-  const metaKey = ROLES_KEY;
-  if (descriptor) {
-    const existing = target[metaKey] || [];
-    target[metaKey] = [...existing, ...roles];
-  }
-  return descriptor;
-};
+export const Roles = (...roles: string[]) => SetMetadata(ROLES_KEY, roles);
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -24,7 +18,7 @@ export class AuthGuard implements CanActivate {
 
     const token = authHeader.slice(7);
     try {
-      const decoded = JSON.parse(Buffer.from(token.split(".")[1], "base64").toString()) as { sub: string };
+      const decoded = jwt.verify(token, process.env.SESSION_SECRET ?? "dev-secret-change-me") as { sub: string };
       const user = await prisma.user.findUnique({
         where: { id: decoded.sub },
         include: { roles: true },

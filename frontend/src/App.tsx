@@ -10,6 +10,7 @@ import AppShell from "@/components/AppShell";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Students from "./pages/Students";
 import Classes from "./pages/Classes";
@@ -40,6 +41,7 @@ const App = () => (
             <Analytics />
             <Routes>
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/auth/reset" element={<ResetPassword />} />
               <Route path="/auth" element={<Auth />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppShell />}>

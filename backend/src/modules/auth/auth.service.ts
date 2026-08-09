@@ -3,44 +3,68 @@ import { PrismaService } from "../../core/prisma.service";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
 import * as bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { EmailService } from "../email/email.service";
 import type { SigninInput, BootstrapInput, ForgotPasswordInput, ResetPasswordInput } from "./dto/auth.dto";
 
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL ?? "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+const supabaseAdmin =
+  process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY,
+        { auth: { autoRefreshToken: false, persistSession: false } },
+      )
+    : null;
+
+const JWT_SECRET = process.env.SESSION_SECRET ?? "dev-secret-change-me";
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
+  ) {}
+
+  private generateToken(userId: string): string {
+    return jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: "30d" });
+  }
+
+  private verifyToken(token: string): { sub: string } {
+    return jwt.verify(token, JWT_SECRET) as { sub: string };
+  }
 
   async signin(input: SigninInput) {
-    const { data, error } = await supabaseAdmin.auth.signInWithPassword({
-      email: input.email,
-      password: input.password,
-    });
-
-    if (error || !data.user) {
-      throw new BadRequestException("Invalid email or password");
-    }
-
     const user = await this.prisma.user.findUnique({
       where: { email: input.email },
       include: { roles: true },
     });
 
     if (!user) {
-      throw new NotFoundException("User profile not found");
+      throw new BadRequestException("Invalid email or password");
     }
 
     if (!user.isActive) {
       throw new BadRequestException("Account is inactive");
     }
 
-    const token = Buffer.from(
-      JSON.stringify({ sub: user.id, iat: Date.now() })
-    ).toString("base64url");
+    if (user.passwordHash) {
+      const ok = await bcrypt.compare(input.password, user.passwordHash);
+      if (!ok) {
+        throw new BadRequestException("Invalid email or password");
+      }
+    } else if (supabaseAdmin) {
+      const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+        email: input.email,
+        password: input.password,
+      });
+      if (error || !data.user) {
+        throw new BadRequestException("Invalid email or password");
+      }
+    } else {
+      throw new BadRequestException("Invalid email or password");
+    }
+
+    const token = this.generateToken(user.id);
 
     return {
       token,
@@ -68,22 +92,33 @@ export class AuthService {
       },
     });
 
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: input.adminEmail,
-      password: input.adminPassword,
-      email_confirm: true,
-    });
-
-    if (authError || !authData.user) {
-      throw new BadRequestException(authError?.message || "Failed to create admin user");
-    }
-
     const passwordHash = await bcrypt.hash(input.adminPassword, 10);
+
+    let userId: string;
+    let userEmail: string;
+
+    if (supabaseAdmin) {
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: input.adminEmail,
+        password: input.adminPassword,
+        email_confirm: true,
+      });
+
+      if (authError || !authData.user) {
+        throw new BadRequestException(authError?.message || "Failed to create admin user in Supabase Auth");
+      }
+
+      userId = authData.user.id;
+      userEmail = input.adminEmail;
+    } else {
+      userId = randomUUID();
+      userEmail = input.adminEmail;
+    }
 
     const user = await this.prisma.user.create({
       data: {
-        id: authData.user.id,
-        email: input.adminEmail,
+        id: userId,
+        email: userEmail,
         fullName: input.adminFullName,
         passwordHash,
         schoolId: school.id,
@@ -99,9 +134,15 @@ export class AuthService {
       include: { roles: true },
     });
 
-    const token = Buffer.from(
-      JSON.stringify({ sub: user.id, iat: Date.now() })
-    ).toString("base64url");
+    await this.emailService.sendWelcomeEmail({
+      to: input.adminEmail,
+      fullName: input.adminFullName,
+      schoolName: school.name,
+      loginUrl: `${process.env.FRONTEND_URL ?? "http://localhost:5173"}/auth`,
+      password: input.adminPassword,
+    });
+
+    const token = this.generateToken(user.id);
 
     return {
       token,
@@ -138,6 +179,19 @@ export class AuthService {
     };
   }
 
+  async getRoles(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { roles: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    return user.roles.map((r) => r.role);
+  }
+
   async forgotPassword(input: ForgotPasswordInput) {
     const user = await this.prisma.user.findUnique({
       where: { email: input.email },
@@ -147,14 +201,32 @@ export class AuthService {
       return { message: "If an account exists, a reset link has been sent." };
     }
 
-    const { error } = await supabaseAdmin.auth.admin.generateLink({
-      type: "magiclink",
-      email: input.email,
+    const nameMatch =
+      user.fullName?.toLowerCase().trim() === input.fullName.toLowerCase().trim();
+
+    if (!nameMatch) {
+      return { message: "If an account exists, a reset link has been sent." };
+    }
+
+    const token = randomUUID();
+
+    await this.prisma.activationToken.deleteMany({
+      where: { userId: user.id },
     });
 
-    if (error) {
-      throw new BadRequestException("Failed to generate reset link");
-    }
+    await this.prisma.activationToken.create({
+      data: {
+        userId: user.id,
+        token,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      },
+    });
+
+    await this.emailService.sendPasswordResetEmail({
+      to: input.email,
+      fullName: user.fullName ?? "there",
+      resetUrl: `${process.env.FRONTEND_URL ?? "http://localhost:5173"}/auth/reset?token=${token}`,
+    });
 
     return { message: "If an account exists, a reset link has been sent." };
   }
@@ -176,9 +248,91 @@ export class AuthService {
       data: { passwordHash, activatedAt: new Date() },
     });
 
+    if (supabaseAdmin) {
+      await supabaseAdmin.auth.admin.updateUserById(tokenRecord.userId, {
+        password: input.password,
+      });
+    }
+
     await this.prisma.activationToken.delete({
       where: { id: tokenRecord.id },
     });
+
+    return { message: "Password reset successfully" };
+  }
+
+  async verifyResetToken(token: string) {
+    const tokenRecord = await this.prisma.activationToken.findUnique({
+      where: { token },
+      include: { user: true },
+    });
+
+    if (!tokenRecord || tokenRecord.expiresAt < new Date()) {
+      throw new BadRequestException("Invalid or expired token");
+    }
+
+    return { valid: true, email: tokenRecord.user.email };
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    if (user.passwordHash) {
+      const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!ok) {
+        throw new BadRequestException("Current password is incorrect");
+      }
+    } else if (supabaseAdmin) {
+      const { error } = await supabaseAdmin.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+      if (error) {
+        throw new BadRequestException("Current password is incorrect");
+      }
+    } else {
+      throw new BadRequestException("Current password is incorrect");
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    if (supabaseAdmin) {
+      await supabaseAdmin.auth.admin.updateUserById(userId, { password: newPassword });
+    }
+
+    return { message: "Password changed successfully" };
+  }
+
+  async adminResetPassword(userId: string, newPassword: string, schoolId: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, schoolId },
+    });
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, activatedAt: new Date() },
+    });
+
+    if (supabaseAdmin) {
+      await supabaseAdmin.auth.admin.updateUserById(userId, { password: newPassword });
+    }
 
     return { message: "Password reset successfully" };
   }
@@ -188,7 +342,7 @@ export class AuthService {
     fullName: string;
     role?: string;
     department?: string;
-    tscEmail?: string;
+    password?: string;
   }, createdBy: string) {
     const existing = await this.prisma.user.findUnique({
       where: { email: input.email },
@@ -214,26 +368,34 @@ export class AuthService {
       }
     }
 
-    const tempPassword = randomUUID().slice(0, 12);
-
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: input.email,
-      password: tempPassword,
-      email_confirm: false,
-    });
-
-    if (authError || !authData.user) {
-      throw new BadRequestException(authError?.message || "Failed to create user in Supabase Auth");
-    }
-
+    const tempPassword = input.password || randomUUID().slice(0, 12);
     const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+    let userId: string;
+
+    if (supabaseAdmin) {
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: input.email,
+        password: tempPassword,
+        email_confirm: false,
+      });
+
+      if (authError || !authData.user) {
+        throw new BadRequestException(authError?.message || "Failed to create user in Supabase Auth");
+      }
+
+      userId = authData.user.id;
+    } else {
+      userId = randomUUID();
+    }
 
     const user = await this.prisma.user.create({
       data: {
-        id: authData.user.id,
+        id: userId,
         email: input.email,
         fullName: input.fullName,
         passwordHash,
+        phoneNumber: input.department ?? null,
         schoolId,
         isActive: false,
         roles: {
@@ -245,12 +407,24 @@ export class AuthService {
       include: { roles: true },
     });
 
+    const activationToken = randomUUID();
+
     await this.prisma.activationToken.create({
       data: {
         userId: user.id,
-        token: randomUUID(),
+        token: activationToken,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
+    });
+
+    const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
+
+    await this.emailService.sendWelcomeEmail({
+      to: input.email,
+      fullName: input.fullName,
+      schoolName: school.name,
+      loginUrl: `${frontendUrl}/auth`,
+      password: tempPassword,
     });
 
     return {
@@ -259,6 +433,7 @@ export class AuthService {
       fullName: user.fullName,
       roles: user.roles.map((r) => r.role),
       tempPassword,
+      activationToken,
     };
   }
 
@@ -295,7 +470,7 @@ export class AuthService {
       id: u.id,
       email: u.email,
       full_name: u.fullName,
-      department: null,
+      department: u.phoneNumber ?? null,
       approved: u.isActive,
       created_at: u.createdAt.toISOString(),
       roles: u.roles.map((r) => r.role),
@@ -309,6 +484,10 @@ export class AuthService {
 
     if (!user) {
       throw new NotFoundException("User not found");
+    }
+
+    if (supabaseAdmin) {
+      await supabaseAdmin.auth.admin.deleteUser(userId);
     }
 
     await this.prisma.user.delete({ where: { id: userId } });

@@ -5,37 +5,48 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { School, KeyRound } from "lucide-react";
+import { KeyRound, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/store/auth";
+import { useSchool } from "@/store/school";
 import Loading from "@/components/Loading";
+import { SchoolLogoIcon } from "@/components/SchoolLogo";
 
 export default function Auth() {
   const [email, setEmail]           = useState("");
   const [password, setPassword]     = useState("");
   const [busy, setBusy]             = useState(false);
-  const [forgotOpen, setForgotOpen] = useState(false);
+   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotFullName, setForgotFullName] = useState("");
+  const [forgotSubmitted, setForgotSubmitted] = useState(false);
   const [forgotBusy, setForgotBusy] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   const nav = useNavigate();
   const { session, loading, signIn } = useAuth();
+  const { state } = useSchool();
+  const schoolTag = state.settings.schoolTag;
 
   useEffect(() => {
-    if (!loading && session) nav("/", { replace: true });
-  }, [session, loading, nav]);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      await signIn(email, password);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Authentication failed";
-      toast.error(message);
-    } finally {
-      setBusy(false);
+    if (!loading && session && !signedIn) {
+      nav("/", { replace: true });
     }
-  };
+  }, [session, loading, nav, signedIn]);
+
+   const submit = async (e: React.FormEvent) => {
+     e.preventDefault();
+     setBusy(true);
+     try {
+       await signIn(email, password);
+       setSignedIn(true);
+       setTimeout(() => nav("/", { replace: true }), 1200);
+     } catch (err: unknown) {
+       const message = err instanceof Error ? err.message : "Authentication failed";
+       toast.error(message);
+     } finally {
+       setBusy(false);
+     }
+   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,15 +55,13 @@ export default function Auth() {
       const res = await fetch("/api/v2/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: forgotEmail }),
+        body: JSON.stringify({ email: forgotEmail, fullName: forgotFullName }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to reset password");
-      toast.success(data.message || "If an account exists, a reset link has been sent.");
-      setForgotOpen(false);
-      setForgotEmail("");
+      if (!res.ok) throw new Error(data.message || "Failed to process request");
+      setForgotSubmitted(true);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to reset password";
+      const message = err instanceof Error ? err.message : "Failed to process request";
       toast.error(message);
     } finally {
       setForgotBusy(false);
@@ -63,15 +72,25 @@ export default function Auth() {
     <div className="min-h-screen grid place-items-center px-4 auth-bg">
       {busy ? (
         <Loading />
+      ) : signedIn ? (
+        <Card className="w-full max-w-md p-8 text-center space-y-6">
+          <div className="mx-auto h-16 w-16 rounded-full bg-success/10 text-success grid place-items-center">
+            <CheckCircle className="h-8 w-8" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">Welcome back!</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Signed in to {schoolTag}. Redirecting to your dashboard...
+            </p>
+          </div>
+        </Card>
       ) : (
         <Card className="w-full max-w-md p-6">
         <div className="flex items-center gap-3 mb-6">
-          <div className="h-10 w-10 rounded-md bg-primary text-primary-foreground grid place-items-center">
-            <School className="h-5 w-5" />
-          </div>
+          <SchoolLogoIcon size="md" />
           <div>
             <div className="font-semibold">Academic Compass</div>
-            <div className="text-xs text-muted-foreground">Sign in to your school account</div>
+            <div className="text-xs text-muted-foreground">Sign in to {schoolTag}</div>
           </div>
         </div>
 
@@ -112,25 +131,58 @@ export default function Auth() {
                 <KeyRound className="h-5 w-5" /> Reset Password
               </DialogTitle>
               <DialogDescription>
-                Enter your registered email address to receive a password reset link.
+                Enter your registered email and full name to verify your identity. A secure reset link will be sent to the email on file.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleForgotPassword} className="space-y-4">
-              <div>
-                <Label htmlFor="forgot-email">Email Address</Label>
-                <Input
-                  id="forgot-email"
-                  type="email"
-                  value={forgotEmail}
-                  onChange={(e) => setForgotEmail(e.target.value)}
-                  required
-                  disabled={forgotBusy}
-                />
+            {forgotSubmitted ? (
+              <div className="text-center space-y-4 py-4">
+                <CheckCircle className="h-12 w-12 text-success mx-auto" />
+                <p className="text-sm">
+                  If an account with that email and name exists, a password reset link has been sent.
+                  The link expires in 1 hour. Please check your inbox (and spam folder).
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setForgotSubmitted(false); setForgotEmail(""); setForgotFullName(""); }}
+                >
+                  Close
+                </Button>
               </div>
-              <Button type="submit" className="w-full" disabled={forgotBusy}>
-                {forgotBusy ? "Sending…" : "Send Reset Link"}
-              </Button>
-            </form>
+            ) : (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div>
+                  <Label htmlFor="forgot-email">Email Address</Label>
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    required
+                    disabled={forgotBusy}
+                    placeholder="you@school.ac.ke"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="forgot-full-name">Full Name (as registered)</Label>
+                  <Input
+                    id="forgot-full-name"
+                    type="text"
+                    value={forgotFullName}
+                    onChange={(e) => setForgotFullName(e.target.value)}
+                    required
+                    disabled={forgotBusy}
+                    placeholder="e.g. Amina Wanjiru Ochieng"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Must match the name on your account for verification.
+                  </p>
+                </div>
+                <Button type="submit" className="w-full" disabled={forgotBusy}>
+                  {forgotBusy ? "Sending…" : "Send Reset Link"}
+                </Button>
+              </form>
+            )}
           </DialogContent>
         </Dialog>
 
@@ -138,7 +190,7 @@ export default function Auth() {
           Contact your Principal for account access. Teacher accounts are created by the school administration.
         </p>
         </Card>
-        )}
-      </div>
-    );
-  }
+      )}
+    </div>
+  );
+}

@@ -11,7 +11,13 @@ export default function AuthCallback() {
   const { signIn } = useAuth();
 
   useEffect(() => {
+    if (!supabase) {
+      setError("Supabase is not configured. Please contact your administrator.");
+      return;
+    }
+
     const handleCallback = async () => {
+      if (!supabase) return;
       try {
         const { data, error: supabaseError } = await supabase.auth.getSession();
         if (supabaseError || !data.session) {

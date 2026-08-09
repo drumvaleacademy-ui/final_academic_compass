@@ -14,6 +14,7 @@ export const bootstrapSchema = z.object({
 
 export const forgotPasswordSchema = z.object({
   email: z.string().email().trim().toLowerCase(),
+  fullName: z.string().min(1, "Full name is required"),
 });
 
 export const resetPasswordSchema = z.object({

@@ -132,6 +132,15 @@ export interface ConflictItem {
 
 export interface SchoolSettings {
   schoolName: string;
+  schoolTag: string;
+  schoolAddress: string;
+  schoolEmail: string;
+  schoolWebsite: string;
+  schoolMotto: string;
+  schoolVision: string;
+  schoolMission: string;
+  principalName: string;
+  principalTitle: string;
   academicYear: number;
 }
 
@@ -185,7 +194,19 @@ const defaultState: SchoolState = {
   entries: [],
   timetable: [],
   conflicts: [],
-  settings: { schoolName: "Academic Compass School", academicYear: new Date().getFullYear() },
+  settings: {
+    schoolName: "DRUMVALE SECONDARY SCHOOL",
+    schoolTag: import.meta.env.VITE_SCHOOL_TAG ?? "Drumvale Academy - Academic Compass",
+    schoolAddress: "P.O. BOX 99-00520 RUAI-NAIROBI, TEL: 0704 921 291",
+    schoolEmail: "info@drumvalesecondary.com",
+    schoolWebsite: "http://www.drumvalesecondary.com",
+    schoolMotto: "Excellence is our commitment",
+    schoolVision: "To empower all students to unlock and achieve their full potential",
+    schoolMission: "To provide quality educational service that inspires all students to realize their aspirations; guided by the value of Godliness, self-discipline, commitment, fairness and focus on continuous improvement with excellence as the performance benchmark.",
+    principalName: "SIMON MWANGI",
+    principalTitle: "PRINCIPAL / BOM SECRETARY",
+    academicYear: new Date().getFullYear(),
+  },
   online: typeof navigator !== "undefined" ? navigator.onLine : true,
   lastSyncAt: null,
   syncQueue: [],

@@ -51,7 +51,7 @@ export default function Profile() {
     if (!isAuthenticator) return;
     setLoadingProfiles(true);
     try {
-      const data = await api.get<ProfileItem[]>("/auth/profiles");
+      const data = await api.get<ProfileItem[]>("/v2/auth/profiles");
       const backendProfiles: ProfileItem[] = Array.isArray(data) ? data : [];
       const localTeachers: ProfileItem[] = state.teachers.map((t) => ({
         id: t.id,

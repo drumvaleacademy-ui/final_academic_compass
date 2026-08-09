@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+  previewFeatures = ["fullTextIndex", "fullTextSearchPostgres"]
 }
 
 datasource db {
@@ -8,60 +8,49 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  PLATFORM_ADMIN
-  PRINCIPAL
-  SENIOR_TEACHER
-  TEACHER
-  PARENT
-  STUDENT
-}
-
 model School {
-  id            String    @id @default(uuid())
-  name          String
-  code          String    @unique
-  motto         String?
-  logoUrl       String?
-  emailDomains  String[]
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  users         User[]
-  classes       Class[]
-  subjects      Subject[]
-  exams         Exam[]
-  terms         Term[]
-  settings      SchoolSettings?
-  csvImports    CsvImport[]
-  smsLogs       SmsLog[]
-  auditLogs     AuditLog[]
+  id             String          @id @default(uuid())
+  name           String
+  code           String          @unique
+  motto          String?
+  logoUrl        String?
+  emailDomains   String[]
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  auditLogs      AuditLog[]
+  classes        Class[]
+  csvImports     CsvImport[]
+  exams          Exam[]
+  smsLogs        SmsLog[]
+  subjects       Subject[]
+  terms          Term[]
   timetableSlots TimetableSlot[]
+  settings       SchoolSettings?
+  syncConflicts  SyncConflict[]
+  users          User[]
 
   @@map("schools")
 }
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  fullName      String
-  passwordHash  String?
-  phoneNumber   String?
-  isActive      Boolean   @default(true)
-  activatedAt   DateTime?
-  lastLoginAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  schoolId      String
-  school        School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-
-  roles         UserRole[]
-  refreshTokens RefreshToken[]
-  auditLogs     AuditLog[] @relation("UserAuditLogs")
-  createdImports CsvImport[] @relation("UserCsvImports")
+  id               String            @id @default(uuid())
+  email            String            @unique
+  fullName         String
+  passwordHash     String?
+  phoneNumber      String?
+  isActive         Boolean           @default(true)
+  activatedAt      DateTime?
+  lastLoginAt      DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  schoolId         String
   activationTokens ActivationToken[]
+  auditLogs        AuditLog[]        @relation("UserAuditLogs")
+  createdImports   CsvImport[]       @relation("UserCsvImports")
+  refreshTokens    RefreshToken[]
+  roles            UserRole[]
+  school           School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   @@map("users")
 }
@@ -69,9 +58,9 @@ model User {
 model UserRole {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   role      Role
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, role])
   @@map("user_roles")
@@ -80,10 +69,10 @@ model UserRole {
 model RefreshToken {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("refresh_tokens")
 }
@@ -91,68 +80,65 @@ model RefreshToken {
 model SchoolSettings {
   id            String   @id @default(uuid())
   schoolId      String   @unique
-  school        School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   currentTermId String?
   gradingScale  Json?
   smsProvider   String?
   smsSenderId   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  school        School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   @@map("school_settings")
 }
 
 model Class {
-  id        String   @id @default(uuid())
-  schoolId  String
-  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  name      String
-  level     Int
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  streams   Stream[]
-  timetable TimetableSlot[]
-  exams     Exam[]
+  id                 String                   @id @default(uuid())
+  schoolId           String
+  name               String
+  level              Int
+  isActive           Boolean                  @default(true)
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  school             School                   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  exams              Exam[]
+  sheets             MarkSheet[]
+  streams            Stream[]
+  students           Student[]
+  timetable          TimetableSlot[]
   teacherAssignments TeacherClassAssignment[]
-  students  Student[]
-  sheets    MarkSheet[]
 }
 
 model Stream {
-  id        String   @id @default(uuid())
+  id        String          @id @default(uuid())
   classId   String
-  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
   name      String
-  createdAt DateTime @default(now())
-
+  createdAt DateTime        @default(now())
+  sheets    MarkSheet[]
+  class     Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
   students  Student[]
   timetable TimetableSlot[]
-  sheets    MarkSheet[]
 }
 
 model Subject {
-  id          String   @id @default(uuid())
-  schoolId    String
-  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  name        String
-  code        String
-  isCore      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  timetable   TimetableSlot[]
-  sheets      MarkSheet[]
+  id                 String                     @id @default(uuid())
+  schoolId           String
+  name               String
+  code               String
+  isCore             Boolean                    @default(false)
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  sheets             MarkSheet[]
+  school             School                     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  timetable          TimetableSlot[]
   teacherAssignments TeacherSubjectAssignment[]
 }
 
 model TeacherSubjectAssignment {
-  id         String   @id @default(uuid())
-  userId     String
-  subjectId  String
-  subject    Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
+  id        String   @id @default(uuid())
+  userId    String
+  subjectId String
+  createdAt DateTime @default(now())
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
 
   @@unique([userId, subjectId])
   @@map("teacher_subject_assignments")
@@ -163,138 +149,131 @@ model TeacherClassAssignment {
   userId         String
   classId        String
   isClassTeacher Boolean  @default(false)
-  class          Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
   createdAt      DateTime @default(now())
+  class          Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
 
   @@unique([userId, classId])
   @@map("teacher_class_assignments")
 }
 
 model Parent {
-  id        String   @id @default(uuid())
-  userId    String   @unique
+  id        String          @id @default(uuid())
+  userId    String          @unique
   createdBy String
-  createdAt DateTime @default(now())
-
+  createdAt DateTime        @default(now())
   children  StudentParent[]
 }
 
 model StudentParent {
   id        String   @id @default(uuid())
   studentId String
-  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   parentId  String
-  parent    Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+  parent    Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 }
 
 model Student {
-  id            String   @id @default(uuid())
-  schoolId      String
-  admissionNo   String
-  fullName      String
-  gender        String
-  dateOfBirth   DateTime?
-  classId       String
-  streamId      String
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  class         Class     @relation(fields: [classId], references: [id], onDelete: Restrict)
-  stream        Stream    @relation(fields: [streamId], references: [id], onDelete: Restrict)
-  marks         MarkEntry[]
-  parents       StudentParent[]
+  id          String          @id @default(uuid())
+  schoolId    String
+  admissionNo String
+  fullName    String
+  gender      String
+  dateOfBirth DateTime?
+  classId     String
+  streamId    String
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  marks       MarkEntry[]
+  class       Class           @relation(fields: [classId], references: [id])
+  stream      Stream          @relation(fields: [streamId], references: [id])
+  parents     StudentParent[]
 }
 
 model Term {
   id        String   @id @default(uuid())
   schoolId  String
-  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   name      String
   startDate DateTime
   endDate   DateTime
   isActive  Boolean  @default(false)
   createdAt DateTime @default(now())
-
-  exams Exam[]
+  exams     Exam[]
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 }
 
 model Exam {
-  id          String   @id @default(uuid())
+  id          String      @id @default(uuid())
   schoolId    String
-  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   classId     String
-  class       Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
   termId      String
-  term        Term     @relation(fields: [termId], references: [id], onDelete: Restrict)
   name        String
   year        Int
-  outOf       Int      @default(100)
-  status      String   @default("draft")
+  outOf       Int         @default(100)
+  status      String      @default("draft")
   publishedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  sheets MarkSheet[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  class       Class       @relation(fields: [classId], references: [id], onDelete: Cascade)
+  school      School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  term        Term        @relation(fields: [termId], references: [id])
+  sheets      MarkSheet[]
 }
 
 model MarkSheet {
-  id          String   @id @default(uuid())
-  examId      String
-  exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
-  classId     String
-  class       Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
-  streamId    String
-  stream      Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
-  subjectId   String
-  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  teacherId   String
-  status      String   @default("draft")
-  locked      Boolean  @default(false)
-  comment     String?
-  updatedAt   DateTime @default(now()) @updatedAt
-
-  entries     MarkEntry[]
+  id        String      @id @default(uuid())
+  examId    String
+  classId   String
+  streamId  String
+  subjectId String
+  teacherId String
+  status    String      @default("draft")
+  locked    Boolean     @default(false)
+  comment   String?
+  updatedAt DateTime    @default(now()) @updatedAt
+  entries   MarkEntry[]
+  class     Class       @relation(fields: [classId], references: [id], onDelete: Cascade)
+  exam      Exam        @relation(fields: [examId], references: [id], onDelete: Cascade)
+  stream    Stream      @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  subject   Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
 }
 
 model MarkEntry {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   sheetId   String
-  sheet     MarkSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
   studentId String
-  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   score     Int?
-  updatedAt DateTime @default(now()) @updatedAt
+  updatedAt DateTime  @default(now()) @updatedAt
   updatedBy String
+  sheet     MarkSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
 }
 
 model TimetableSlot {
   id        String   @id @default(uuid())
   schoolId  String
-  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   classId   String
-  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
   streamId  String?
-  stream    Stream?  @relation(fields: [streamId], references: [id], onDelete: Cascade)
   dayOfWeek Int
   period    Int
   startTime String
   endTime   String
   subjectId String?
-  subject   Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
   teacherId String?
   room      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  stream    Stream?  @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  subject   Subject? @relation(fields: [subjectId], references: [id])
 }
 
 model AuditLog {
   id        String   @id @default(uuid())
   schoolId  String
-  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   userId    String
-  actor     User     @relation("UserAuditLogs", fields: [userId], references: [id])
   action    String
   entity    String
   entityId  String
@@ -303,12 +282,13 @@ model AuditLog {
   ipAddress String?
   userAgent String?
   createdAt DateTime @default(now())
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  actor     User     @relation("UserAuditLogs", fields: [userId], references: [id])
 }
 
 model SmsLog {
   id         String   @id @default(uuid())
   schoolId   String
-  school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   recipient  String
   message    String
   provider   String
@@ -316,11 +296,11 @@ model SmsLog {
   providerId String?
   error      String?
   sentAt     DateTime @default(now())
+  school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 }
 
 model SyncConflict {
-  id             String   @id @default(uuid())
-  schoolId       String
+  id             String    @id @default(uuid())
   entity         String
   entityId       String
   field          String
@@ -328,34 +308,45 @@ model SyncConflict {
   incomingValue  String?
   incomingBy     String?
   incomingDevice String?
-  status         String   @default("pending")
+  status         String    @default("pending")
   resolution     String?
   customValue    String?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime  @default(now())
   resolvedAt     DateTime?
+  schoolId       String
+  school         School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   @@map("sync_conflicts")
 }
 
 model ActivationToken {
   id        String   @id @default(uuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model CsvImport {
   id           String   @id @default(uuid())
   schoolId     String
-  school       School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   entity       String
   fileName     String
   importedBy   String
-  importer     User     @relation("UserCsvImports", fields: [importedBy], references: [id])
   successCount Int
   failureCount Int
   errors       Json
   createdAt    DateTime @default(now())
+  importer     User     @relation("UserCsvImports", fields: [importedBy], references: [id])
+  school       School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  PLATFORM_ADMIN
+  PRINCIPAL
+  SENIOR_TEACHER
+  TEACHER
+  PARENT
+  STUDENT
 }

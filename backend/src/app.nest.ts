@@ -4,18 +4,14 @@ import { ExpressAdapter } from "@nestjs/platform-express";
 import express from "express";
 
 export async function createNestApp() {
-  const router = express.Router();
+  const expressApp = express();
   const app = await NestFactory.create(
     AppModule,
-    new ExpressAdapter(router),
-    { logger: false }
+    new ExpressAdapter(expressApp),
+    { logger: ["error", "warn", "log", "debug", "verbose"] }
   );
 
-  app.setGlobalPrefix("v2");
-  app.enableCors({
-    origin: process.env.FRONTEND_URL || true,
-    credentials: true,
-  });
+  await app.init();
 
-  return { app, router };
+  return { app, router: expressApp };
 }

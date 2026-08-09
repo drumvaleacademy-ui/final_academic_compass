@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Delete, Body, UseGuards, Req, HttpCode, HttpStatus, Param } from "@nestjs/common";
+import { Controller, Post, Get, Delete, Body, UseGuards, Req, HttpCode, HttpStatus, Param, Query } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { AuthGuard, RolesGuard, Roles } from "../../core/guards/nestjs.guards";
 
@@ -18,10 +18,16 @@ export class AuthController {
     return this.authService.bootstrap(input);
   }
 
-  @Get("me")
+   @Get("me")
   @UseGuards(AuthGuard)
   async me(@Req() req: any) {
     return this.authService.me(req.user.id);
+  }
+
+  @Get("roles")
+  @UseGuards(AuthGuard)
+  async roles(@Req() req: any) {
+    return this.authService.getRoles(req.user.id);
   }
 
   @Get("profiles")
@@ -55,17 +61,38 @@ export class AuthController {
     return this.authService.assignRole(req.user.schoolId, body.userId, body.role, body.action);
   }
 
-  @Post("forgot-password")
+   @Post("forgot-password")
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() input: any) {
     return this.authService.forgotPassword(input);
   }
 
-  @Post("reset-password")
+  @Post("change-password")
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async changePassword(@Req() req: any, @Body() body: any) {
+    return this.authService.changePassword(req.user.id, body.currentPassword, body.newPassword);
+  }
+
+  @Post("admin-reset-password")
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles("PLATFORM_ADMIN", "PRINCIPAL")
+  @HttpCode(HttpStatus.OK)
+  async adminResetPassword(@Req() req: any, @Body() body: any) {
+    return this.authService.adminResetPassword(body.userId, body.newPassword, req.user.schoolId);
+  }
+
+   @Post("reset-password")
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() input: any) {
     return this.authService.resetPassword(input);
   }
+
+  @Get("verify-reset-token")
+  async verifyResetToken(@Query("token") token: string) {
+    return this.authService.verifyResetToken(token);
+  }
+
 
   @Post("teachers")
   @UseGuards(AuthGuard, RolesGuard)

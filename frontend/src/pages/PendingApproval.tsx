@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/store/auth";
-import { Clock, LogOut, RefreshCw, School, ShieldCheck, Hammer } from "lucide-react";
+import { Clock, LogOut, RefreshCw, ShieldCheck, Hammer } from "lucide-react";
 import { toast } from "sonner";
+import { SchoolLogoIcon } from "@/components/SchoolLogo";
 
 export default function PendingApproval() {
   const { user, signOut, refreshProfile, refreshRoles } = useAuth();
@@ -36,7 +37,7 @@ export default function PendingApproval() {
         </div>
 
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          <School className="h-4 w-4" /> Academic Compass
+          <SchoolLogoIcon size="sm" /> Academic Compass
         </div>
 
         <div>

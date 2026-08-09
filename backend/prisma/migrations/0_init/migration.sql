@@ -239,6 +239,7 @@ CREATE TABLE "timetable_slots" (
 -- CreateTable
 CREATE TABLE "sync_conflicts" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "schoolId" TEXT NOT NULL,
     "entity" TEXT NOT NULL,
     "entityId" TEXT NOT NULL,
     "field" TEXT NOT NULL,
@@ -254,6 +255,9 @@ CREATE TABLE "sync_conflicts" (
 
     CONSTRAINT "sync_conflicts_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "sync_conflicts_entity_entityId_field_status_key" ON "sync_conflicts"("entity", "entityId", "field", "status");
 
 -- CreateTable
 CREATE TABLE "audit_logs" (
@@ -438,3 +442,6 @@ ALTER TABLE "activation_tokens" ADD CONSTRAINT "activation_tokens_userId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "csv_imports" ADD CONSTRAINT "csv_imports_schoolId_fkey" FOREIGN KEY ("schoolId") REFERENCES "schools"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sync_conflicts" ADD CONSTRAINT "sync_conflicts_schoolId_fkey" FOREIGN KEY ("schoolId") REFERENCES "schools"("id") ON DELETE CASCADE ON UPDATE CASCADE;

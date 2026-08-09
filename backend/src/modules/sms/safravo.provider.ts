@@ -44,7 +44,7 @@ export class SafravoSmsProvider implements SmsProvider, OnModuleInit {
         }),
       });
 
-      } = await response.json() as SafravoResponse;
+      const data = await response.json() as SafravoResponse;
 
       if (response.ok && data.status === "success") {
         return {
@@ -57,11 +57,11 @@ export class SafravoSmsProvider implements SmsProvider, OnModuleInit {
         success: false,
         error: data.error || `HTTP ${response.status}: ${response.statusText}`,
       };
-      } catch (error: unknown) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
+    } catch (error: unknown) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
   }
 }

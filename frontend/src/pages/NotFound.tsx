@@ -1,6 +1,6 @@
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
-import { School } from "lucide-react";
+import { SchoolLogoIcon } from "@/components/SchoolLogo";
 
 const NotFound = () => {
   const location = useLocation();
@@ -42,7 +42,7 @@ const NotFound = () => {
           href="/"
           className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
         >
-          <School className="h-4 w-4" />
+           <SchoolLogoIcon size="sm" />
           Return to Home
         </a>
       </div>

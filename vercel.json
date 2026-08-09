@@ -2,7 +2,6 @@
   "version": 2,
   "framework": null,
   "installCommand": "pnpm install",
-  "buildCommand": "pnpm --filter @workspace/api-server exec prisma generate && pnpm --filter @workspace/api-server exec prisma db push --skip-generate && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/api-server exec node --enable-source-maps ./dist/seed.mjs && pnpm --filter @workspace/academic-compass run build",
   "builds": [
     {
       "src": "frontend/package.json",

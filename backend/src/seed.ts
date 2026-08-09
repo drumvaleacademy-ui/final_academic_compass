@@ -55,24 +55,35 @@ async function seedPlatformAdmins() {
     return;
   }
 
-  let existing = await prisma.user.count({
-    where: { roles: { some: { role: { in: [Role.PLATFORM_ADMIN] } } } },
-  });
-
-  if (existing > 0) {
-    console.log(`[seed] ${existing} platform admin(s) already exist — skipping seeding`);
-    return;
+  const school = await prisma.school.findFirst();
+  if (!school) {
+    console.error("[seed] No school found — run bootstrap first");
   }
 
+  console.log(`[seed] Ensuring ${admins.length} platform admin(s) exist`);
+
   for (const input of admins) {
-    const existingUser = await prisma.user.findUnique({ where: { email: input.email } });
+    const existingUser = await prisma.user.findUnique({
+      where: { email: input.email },
+      include: { roles: true },
+    });
+
     if (existingUser) {
+      const hasAdminRole = existingUser.roles.some((r) => r.role === Role.PLATFORM_ADMIN);
       await prisma.userRole.upsert({
         where: { userId_role: { userId: existingUser.id, role: Role.PLATFORM_ADMIN } },
         update: {},
         create: { userId: existingUser.id, role: Role.PLATFORM_ADMIN },
       });
-      console.log(`[seed] Assigned PLATFORM_ADMIN role to existing user: ${input.email}`);
+      await prisma.userRole.upsert({
+        where: { userId_role: { userId: existingUser.id, role: Role.PRINCIPAL } },
+        update: {},
+        create: { userId: existingUser.id, role: Role.PRINCIPAL },
+      });
+
+      if (!hasAdminRole) {
+        console.log(`[seed] Assigned PLATFORM_ADMIN role to existing user: ${input.email}`);
+      }
       continue;
     }
 
@@ -97,11 +108,6 @@ async function seedPlatformAdmins() {
     }
 
     const passwordHash = await bcrypt.hash(input.password, 10);
-
-    const school = await prisma.school.findFirst();
-    if (!school) {
-      console.error("[seed] No school found — run bootstrap first");
-    }
 
     await prisma.user.upsert({
       where: { email: input.email },

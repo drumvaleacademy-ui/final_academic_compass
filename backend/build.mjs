@@ -24,6 +24,7 @@ async function buildAll() {
     entryPoints: [
       path.resolve(tmpDir, "index.js"),
       path.resolve(tmpDir, "seed.js"),
+      path.resolve(tmpDir, "serverless.js"),
     ],
     platform: "node",
     bundle: true,

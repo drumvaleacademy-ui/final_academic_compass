@@ -23,9 +23,9 @@ async function buildAll() {
   });
 
   const esbuildConfig = {
-    platform: "node" as const,
+    platform: "node",
     bundle: true,
-    format: "esm" as const,
+    format: "esm",
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
     external: [

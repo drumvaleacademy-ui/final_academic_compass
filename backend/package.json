@@ -3,6 +3,9 @@
     "version": "0.0.0",
     "private": true,
     "type": "module",
+    "engines": {
+        "node": "22.x"
+    },
     "scripts": {
         "dev": "node ./build.mjs && node --enable-source-maps ./dist/index.mjs",
         "build": "prisma generate && node ./build.mjs",

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
 import { rm } from "node:fs/promises";
-import { copyFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { execSync } from "node:child_process";
 
 globalThis.require = createRequire(import.meta.url);
@@ -23,16 +23,10 @@ async function buildAll() {
     stdio: "inherit",
   });
 
-  await esbuild({
-    entryPoints: [
-      path.resolve(tmpDir, "index.js"),
-      path.resolve(tmpDir, "seed.js"),
-      path.resolve(tmpDir, "serverless.js"),
-    ],
+  const sharedConfig = {
     platform: "node",
     bundle: true,
     format: "esm",
-    outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
     external: [
@@ -129,10 +123,33 @@ globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
 globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
+  };
+
+  await esbuild({
+    ...sharedConfig,
+    entryPoints: [
+      path.resolve(tmpDir, "index.js"),
+      path.resolve(tmpDir, "seed.js"),
+      path.resolve(tmpDir, "serverless.js"),
+    ],
+    outdir: distDir,
+    outExtension: { ".js": ".mjs" },
   });
 
-  await copyFile(path.join(distDir, "serverless.mjs"), path.join(apiDir, "index.mjs"));
-  await copyFile(path.join(distDir, "serverless.mjs.map"), path.join(apiDir, "index.mjs.map"));
+  const serverlessMjs = path.join(distDir, "serverless.mjs");
+  if (!existsSync(serverlessMjs)) {
+    console.error("Expected serverless bundle not found at " + serverlessMjs);
+    process.exit(1);
+  }
+
+  await rm(apiDir, { recursive: true, force: true });
+  await esbuild({
+    ...sharedConfig,
+    entryPoints: [path.resolve(tmpDir, "serverless.js")],
+    outdir: apiDir,
+    entryNames: "index",
+    outExtension: { ".js": ".mjs" },
+  });
 
   await rm(tmpDir, { recursive: true, force: true });
 }

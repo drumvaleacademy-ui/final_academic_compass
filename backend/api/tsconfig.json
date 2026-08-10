@@ -4,10 +4,14 @@
     "outDir": "../dist",
     "rootDir": "..",
     "types": ["node"],
+    "lib": ["es2022", "dom"],
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "noEmitOnError": false,
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "noImplicitThis": false,
+    "strictPropertyInitialization": false
   },
   "include": ["."]
 }

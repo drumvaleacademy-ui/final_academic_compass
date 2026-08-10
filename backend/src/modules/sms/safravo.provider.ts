@@ -7,6 +7,14 @@ interface SafravoResponse {
   error?: string;
 }
 
+// Local shim so we don't conflict with Express's Response type
+interface FetchResponse {
+  ok: boolean;
+  status: number;
+  statusText: string;
+  json(): Promise<unknown>;
+}
+
 @Injectable()
 export class SafravoSmsProvider implements SmsProvider, OnModuleInit {
   private baseUrl: string;
@@ -31,18 +39,21 @@ export class SafravoSmsProvider implements SmsProvider, OnModuleInit {
     senderId?: string;
   }): Promise<{ success: boolean; providerId?: string; error?: string }> {
     try {
-      const response: globalThis.Response = await fetch(`${this.baseUrl}/sms/send`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify({
-          to: params.to,
-          message: params.message,
-          sender_id: params.senderId || this.senderId,
-        }),
-      });
+      const response = await (fetch as (url: string, init?: object) => Promise<FetchResponse>)(
+        `${this.baseUrl}/sms/send`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${this.apiKey}`,
+          },
+          body: JSON.stringify({
+            to: params.to,
+            message: params.message,
+            sender_id: params.senderId || this.senderId,
+          }),
+        }
+      );
 
       const data = await response.json() as SafravoResponse;
 

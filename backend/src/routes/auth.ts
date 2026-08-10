@@ -27,7 +27,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_URL || "https://placeholder.supabase.co",
   process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder",
   { auth: { autoRefreshToken: false, persistSession: false } }
-);
+) as any;
 
 const signupSchema = z.object({
   email: z.string().email().trim().toLowerCase(),

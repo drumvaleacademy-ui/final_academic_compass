@@ -4,9 +4,15 @@
  */
 import "../src/loadEnv";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import type { RequestHandler } from "express";
 import app from "../src/app";
 import { createNestApp } from "../src/app.nest";
 import { getStore } from "../src/lib/store";
+
+// Cast to RequestHandler so TypeScript knows it's callable and has .use()
+const expressApp = app as unknown as {
+  use: (path: string, handler: RequestHandler) => void;
+} & RequestHandler;
 
 let initialized = false;
 
@@ -24,7 +30,7 @@ async function ensureInitialized() {
 
   try {
     const { router } = await createNestApp();
-    app.use("/api/v2", router);
+    expressApp.use("/api/v2", router as unknown as RequestHandler);
     console.log("[vercel] NestJS API mounted at /api/v2");
   } catch (err) {
     console.error("[vercel] Failed to initialize NestJS API:", err);
@@ -34,5 +40,5 @@ async function ensureInitialized() {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   await ensureInitialized();
-  return app(req, res);
+  return expressApp(req as any, res as any);
 }

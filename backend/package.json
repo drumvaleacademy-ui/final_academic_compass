@@ -23,7 +23,7 @@
         "@nestjs/config": "^4.0.4",
         "@nestjs/core": "^11.0.1",
         "@nestjs/platform-express": "^11.0.1",
-        "@prisma/client": "^6.6.0",
+        "@prisma/client": "6.6.0",
         "@supabase/supabase-js": "^2.49.8",
         "bcryptjs": "^3.0.3",
         "class-transformer": "^0.5.1",
@@ -56,7 +56,7 @@
         "esbuild": "0.27.3",
         "esbuild-plugin-pino": "^2.3.3",
         "pino-pretty": "^13.1.3",
-        "prisma": "^6.6.0",
+        "prisma": "6.6.0",
         "thread-stream": "3.1.0"
     }
 }

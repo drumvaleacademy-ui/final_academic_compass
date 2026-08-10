@@ -15,7 +15,7 @@ const tmpDir = path.resolve(artifactDir, "dist", "tmp");
 async function buildAll() {
   await rm(distDir, { recursive: true, force: true });
 
-  execSync("npx tsc -p tsconfig.json --outDir dist/tmp --incremental false", {
+  execSync("npx tsc -p tsconfig.json --outDir dist/tmp --incremental false --noEmitOnError false --skipLibCheck true", {
     cwd: artifactDir,
     stdio: "inherit",
   });

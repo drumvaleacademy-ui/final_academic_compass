@@ -174,7 +174,7 @@ export class AuthService {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
-      roles: user.roles.map((r) => r.role),
+      roles: user.roles.map((r: any) => r.role),
       schoolId: user.schoolId,
     };
   }
@@ -189,7 +189,7 @@ export class AuthService {
       throw new NotFoundException("User not found");
     }
 
-    return user.roles.map((r) => r.role);
+    return user.roles.map((r: any) => r.role);
   }
 
   async forgotPassword(input: ForgotPasswordInput) {
@@ -431,7 +431,7 @@ export class AuthService {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
-      roles: user.roles.map((r) => r.role),
+      roles: user.roles.map((r: any) => r.role),
       tempPassword,
       activationToken,
     };

@@ -4,7 +4,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/dist/serverless.mjs",
+      "dest": "/api/index.mjs",
       "methods": ["GET", "POST", "PUT", "PATCH", "DELETE"]
     }
   ]

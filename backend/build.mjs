@@ -13,23 +13,19 @@ const tmpDir = path.resolve(artifactDir, "dist", "tmp");
 
 async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
+  const apiDir = path.resolve(artifactDir, "api");
   await rm(distDir, { recursive: true, force: true });
+  await rm(apiDir, { recursive: true, force: true });
 
   execSync("npx tsc -p tsconfig.json --outDir dist/tmp --incremental false", {
     cwd: artifactDir,
     stdio: "inherit",
   });
 
-  await esbuild({
-    entryPoints: [
-      path.resolve(tmpDir, "index.js"),
-      path.resolve(tmpDir, "seed.js"),
-      path.resolve(tmpDir, "serverless.js"),
-    ],
-    platform: "node",
+  const esbuildConfig = {
+    platform: "node" as const,
     bundle: true,
-    format: "esm",
-    outdir: distDir,
+    format: "esm" as const,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
     external: [
@@ -126,6 +122,24 @@ globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
 globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
+  };
+
+  await esbuild({
+    ...esbuildConfig,
+    entryPoints: [
+      path.resolve(tmpDir, "index.js"),
+      path.resolve(tmpDir, "seed.js"),
+    ],
+    outdir: distDir,
+    outExtension: { ".js": ".mjs" },
+  });
+
+  await esbuild({
+    ...esbuildConfig,
+    entryPoints: [path.resolve(tmpDir, "serverless.js")],
+    outdir: apiDir,
+    entryNames: "index",
+    outExtension: { ".js": ".mjs" },
   });
 
   await rm(tmpDir, { recursive: true, force: true });

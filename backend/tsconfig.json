@@ -10,5 +10,6 @@
     "experimentalDecorators": true
   },
   "include": ["src", "prisma"],
+  "exclude": ["api"],
   "references": []
 }

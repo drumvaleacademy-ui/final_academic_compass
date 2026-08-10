@@ -5,8 +5,8 @@
     "type": "module",
     "scripts": {
         "dev": "node ./build.mjs && node --enable-source-maps ./dist/index.mjs",
-        "build": "npx prisma generate && npx prisma db push --skip-generate && node ./build.mjs && node --enable-source-maps ./dist/seed.mjs",
-        "vercel-build": "npx prisma generate && npx prisma db push --skip-generate && node ./build.mjs && node --enable-source-maps ./dist/seed.mjs",
+        "build": "prisma generate && node ./build.mjs && node --enable-source-maps ./dist/seed.mjs",
+        "vercel-build": "prisma generate && node ./build.mjs && node --enable-source-maps ./dist/seed.mjs",
         "start": "node --enable-source-maps ./dist/index.mjs",
         "seed": "node --enable-source-maps ./dist/seed.mjs",
         "postinstall": "prisma generate --schema=./prisma/schema.prisma",

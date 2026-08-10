@@ -473,7 +473,7 @@ export class AuthService {
       department: u.phoneNumber ?? null,
       approved: u.isActive,
       created_at: u.createdAt.toISOString(),
-      roles: u.roles.map((r) => r.role),
+      roles: u.roles.map((r: { role: string }) => r.role),
     }));
   }
 

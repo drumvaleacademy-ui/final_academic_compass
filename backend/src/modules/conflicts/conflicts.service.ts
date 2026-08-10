@@ -16,7 +16,7 @@ export class ConflictsService {
       orderBy: { createdAt: "desc" },
     });
 
-     return conflicts.map((c: { id: string; entity: string; entityId: string; field: string; serverValue?: string; incomingValue?: string; incomingBy?: string; incomingDevice?: string; status: string; resolution?: string; customValue?: string; createdAt: Date; resolvedAt?: Date }) => ({
+     return conflicts.map((c: { id: string; entity: string; entityId: string; field: string; serverValue: string | null; incomingValue: string | null; incomingBy: string | null; incomingDevice: string | null; status: string; resolution: string | null; customValue: string | null; createdAt: Date; resolvedAt: Date | null }) => ({
       id: c.id,
       entity: c.entity,
       entityId: c.entityId,

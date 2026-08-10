@@ -1,17 +1,5 @@
 {
   "version": 2,
-  "framework": null,
-  "installCommand": "pnpm install --frozen-lockfile",
-  "builds": [
-    {
-      "src": "dist/serverless.mjs",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["dist/**", "backend/prisma/**"],
-        "maxLambdaSize": "50mb"
-      }
-    }
-  ],
   "routes": [
     {
       "src": "/api/(.*)",

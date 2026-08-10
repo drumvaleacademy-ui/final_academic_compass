@@ -6,7 +6,10 @@ export class SyncService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getSchoolSnapshot(schoolId: string) {
-    const snapshot = await this.prisma.school.findUnique({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db: any = this.prisma;
+
+    const snapshot = await db.school.findUnique({
       where: { id: schoolId },
       include: {
         classes: { include: { streams: true } },
@@ -15,26 +18,14 @@ export class SyncService {
       },
     });
 
-    if (!snapshot) {
-      return { data: null, updatedAt: null };
-    }
-
-    return {
-      data: snapshot,
-      updatedAt: snapshot.updatedAt,
-    };
+    if (!snapshot) return { data: null, updatedAt: null };
+    return { data: snapshot, updatedAt: snapshot.updatedAt };
   }
 
   async mergeSnapshot(schoolId: string, payload: any) {
     const current = await this.getSchoolSnapshot(schoolId);
-    const remoteData = current.data;
-
-    const merged = this.mergeSnapshots(remoteData, payload);
-
-    return {
-      data: merged,
-      updatedAt: new Date().toISOString(),
-    };
+    const merged = this.mergeSnapshots(current.data, payload);
+    return { data: merged, updatedAt: new Date().toISOString() };
   }
 
   private mergeSnapshots(remote: any, local: any): any {

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../core/prisma.service";
 
 @Injectable()
@@ -6,7 +6,11 @@ export class ImportsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async importMarks(schoolId: string, userId: string, rows: any[], sheetId: string, curriculumId: string) {
-    const sheet = await this.prisma.markSheet.findFirst({
+    // Cast to any — Prisma model accessors aren't typed without generated client
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db: any = this.prisma;
+
+    const sheet = await db.markSheet.findFirst({
       where: { id: sheetId, exam: { schoolId } },
       include: { exam: true },
     });
@@ -15,7 +19,7 @@ export class ImportsService {
       throw new NotFoundException("Mark sheet not found");
     }
 
-    const students = await this.prisma.student.findMany({
+    const students = await db.student.findMany({
       where: { schoolId },
     });
 
@@ -32,7 +36,7 @@ export class ImportsService {
       const rawScore = r.score != null && r.score !== "" ? Number(r.score) : null;
       if (!admissionNo) continue;
 
-      const student = studentsByAdm.get(admissionNo) || studentsById.get(admissionNo);
+      const student: any = studentsByAdm.get(admissionNo) || studentsById.get(admissionNo);
       if (!student) {
         errors.push({ admissionNo, error: "Student not found" });
         continue;
@@ -54,16 +58,14 @@ export class ImportsService {
 
     for (const entry of entriesToUpsert) {
       try {
-        await this.prisma.markEntry.create({
-          data: entry,
-        });
+        await db.markEntry.create({ data: entry });
         imported++;
       } catch {
         conflicts++;
       }
     }
 
-    await this.prisma.csvImport.create({
+    await db.csvImport.create({
       data: {
         schoolId,
         entity: "marks",
@@ -75,11 +77,6 @@ export class ImportsService {
       },
     });
 
-    return {
-      imported,
-      conflicts,
-      errors,
-      total: rows.length,
-    };
+    return { imported, conflicts, errors, total: rows.length };
   }
 }

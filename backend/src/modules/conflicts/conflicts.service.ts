@@ -6,17 +6,17 @@ export class ConflictsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(schoolId: string, status?: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db: any = this.prisma;
     const where: any = { schoolId };
-    if (status) {
-      where.status = status;
-    }
+    if (status) where.status = status;
 
-    const conflicts = await this.prisma.syncConflict.findMany({
+    const conflicts = await db.syncConflict.findMany({
       where,
       orderBy: { createdAt: "desc" },
     });
 
-     return conflicts.map((c: { id: string; entity: string; entityId: string; field: string; serverValue: string | null; incomingValue: string | null; incomingBy: string | null; incomingDevice: string | null; status: string; resolution: string | null; customValue: string | null; createdAt: Date; resolvedAt: Date | null }) => ({
+    return conflicts.map((c: any) => ({
       id: c.id,
       entity: c.entity,
       entityId: c.entityId,
@@ -34,15 +34,13 @@ export class ConflictsService {
   }
 
   async resolve(schoolId: string, id: string, resolution: string, customValue?: string) {
-    const conflict = await this.prisma.syncConflict.findFirst({
-      where: { id, schoolId },
-    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db: any = this.prisma;
 
-    if (!conflict) {
-      throw new NotFoundException("Conflict not found");
-    }
+    const conflict = await db.syncConflict.findFirst({ where: { id, schoolId } });
+    if (!conflict) throw new NotFoundException("Conflict not found");
 
-    const updated = await this.prisma.syncConflict.update({
+    const updated = await db.syncConflict.update({
       where: { id },
       data: {
         status: "resolved",
@@ -52,9 +50,6 @@ export class ConflictsService {
       },
     });
 
-    return {
-      id: updated.id,
-      ok: true,
-    };
+    return { id: updated.id, ok: true };
   }
 }

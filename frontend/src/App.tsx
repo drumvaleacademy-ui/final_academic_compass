@@ -9,6 +9,7 @@ import { AuthProvider } from "@/store/auth";
 import AppShell from "@/components/AppShell";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Auth from "./pages/Auth";
+import Bootstrap from "./pages/Bootstrap";
 import AuthCallback from "./pages/AuthCallback";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
@@ -42,6 +43,7 @@ const App = () => (
             <Routes>
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/auth/reset" element={<ResetPassword />} />
+              <Route path="/bootstrap" element={<Bootstrap />} />
               <Route path="/auth" element={<Auth />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppShell />}>

@@ -33,8 +33,8 @@ async function request<T>(
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: res.statusText }));
-      throw new Error(err.message ?? "Request failed");
+      const err = await res.json().catch(() => ({ message: res.statusText || `HTTP ${res.status}` }));
+      throw new Error(err.message || `Request failed (${res.status})`);
     }
     return res.json();
   } catch (err) {

@@ -88,10 +88,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [session?.token]);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const { token, user } = await api.post<{ token: string; user: AuthUser }>(
+    const { token, user } = await api.post<{ token: string; user: AuthUser & { fullName?: string } }>(
       "/v2/auth/signin", { email, password }
     );
-    storeSession(token, user);
+    // Normalize camelCase backend response to snake_case AuthUser
+    const normalizedUser: AuthUser = {
+      ...user,
+      full_name: user.full_name ?? user.fullName ?? null,
+    };
+    storeSession(token, normalizedUser);
   }, []);
 
   const signOut = useCallback(async () => {

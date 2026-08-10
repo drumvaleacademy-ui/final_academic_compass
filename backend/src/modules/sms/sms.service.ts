@@ -24,7 +24,7 @@ export class SmsService {
       message: params.message,
     });
 
-    const log = await this.prisma.smsLog.create({
+    const log = await this.prisma.db.smsLog.create({
       data: {
         schoolId: params.schoolId,
         recipient: params.recipient,
@@ -45,7 +45,7 @@ export class SmsService {
   }
 
   async getLogs(schoolId: string, limit = 100) {
-    const logs = await this.prisma.smsLog.findMany({
+    const logs = await this.prisma.db.smsLog.findMany({
       where: { schoolId },
       orderBy: { sentAt: "desc" },
       take: limit,

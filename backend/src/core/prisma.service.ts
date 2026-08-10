@@ -6,24 +6,27 @@ export class PrismaService extends PrismaClient {
       log: ["query", "error", "warn"],
     });
   }
+
+  /**
+   * Escape hatch typed as `any` so Prisma model accessors don't cause TS2339
+   * errors when the generated client types aren't available at compile time.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  get db(): any { return this; }
 }
 
 // Lazy singleton — instantiated on first use, not at module load time.
-// This prevents the function from crashing at startup if DATABASE_URL is missing.
 let _prisma: PrismaService | null = null;
 
 export function getPrisma(): PrismaService {
-  if (!_prisma) {
-    _prisma = new PrismaService();
-  }
+  if (!_prisma) _prisma = new PrismaService();
   return _prisma;
 }
 
-// Keep the named export for backwards compatibility with guards/services that import `prisma` directly
+// Proxy export so existing code that does `import { prisma }` keeps working
 export const prisma: PrismaService = new Proxy({} as PrismaService, {
-  get(_target, prop) {
-    return (getPrisma() as any)[prop];
-  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  get(_target, prop) { return (getPrisma() as any)[prop]; },
 });
 
 export type PrismaTransaction = Parameters<typeof prisma.$transaction>[0];

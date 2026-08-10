@@ -6,7 +6,7 @@ export class MarksService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(schoolId: string) {
-    const entries = await this.prisma.markEntry.findMany({
+    const entries = await this.prisma.db.markEntry.findMany({
       where: {
         sheet: {
           exam: {
@@ -46,7 +46,7 @@ export class MarksService {
     studentId: string;
     score: number | null;
   }) {
-    const sheet = await this.prisma.markSheet.findFirst({
+    const sheet = await this.prisma.db.markSheet.findFirst({
       where: {
         id: data.sheetId,
         exam: { schoolId },
@@ -58,7 +58,7 @@ export class MarksService {
       throw new NotFoundException("Mark sheet not found");
     }
 
-    const entry = await this.prisma.markEntry.upsert({
+    const entry = await this.prisma.db.markEntry.upsert({
       where: { id: data.id || "" },
       update: {
         score: data.score,

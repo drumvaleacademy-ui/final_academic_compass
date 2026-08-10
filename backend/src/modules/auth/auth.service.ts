@@ -34,7 +34,7 @@ export class AuthService {
   }
 
   async signin(input: SigninInput) {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.db.user.findUnique({
       where: { email: input.email },
       include: { roles: true },
     });
@@ -79,12 +79,12 @@ export class AuthService {
   }
 
   async bootstrap(input: BootstrapInput) {
-    const existingSchool = await this.prisma.school.findFirst();
+    const existingSchool = await this.prisma.db.school.findFirst();
     if (existingSchool) {
       throw new ConflictException("School already initialized");
     }
 
-    const school = await this.prisma.school.create({
+    const school = await this.prisma.db.school.create({
       data: {
         name: input.schoolName,
         code: input.schoolName.toLowerCase().replace(/\s+/g, "-"),
@@ -115,7 +115,7 @@ export class AuthService {
       userEmail = input.adminEmail;
     }
 
-    const user = await this.prisma.user.create({
+    const user = await this.prisma.db.user.create({
       data: {
         id: userId,
         email: userEmail,
@@ -161,7 +161,7 @@ export class AuthService {
   }
 
   async me(userId: string) {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.db.user.findUnique({
       where: { id: userId },
       include: { roles: true },
     });
@@ -180,7 +180,7 @@ export class AuthService {
   }
 
   async getRoles(userId: string) {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.db.user.findUnique({
       where: { id: userId },
       include: { roles: true },
     });
@@ -193,7 +193,7 @@ export class AuthService {
   }
 
   async forgotPassword(input: ForgotPasswordInput) {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.db.user.findUnique({
       where: { email: input.email },
     });
 
@@ -210,11 +210,11 @@ export class AuthService {
 
     const token = randomUUID();
 
-    await this.prisma.activationToken.deleteMany({
+    await this.prisma.db.activationToken.deleteMany({
       where: { userId: user.id },
     });
 
-    await this.prisma.activationToken.create({
+    await this.prisma.db.activationToken.create({
       data: {
         userId: user.id,
         token,
@@ -232,7 +232,7 @@ export class AuthService {
   }
 
   async resetPassword(input: ResetPasswordInput) {
-    const tokenRecord = await this.prisma.activationToken.findUnique({
+    const tokenRecord = await this.prisma.db.activationToken.findUnique({
       where: { token: input.token },
       include: { user: true },
     });
@@ -243,7 +243,7 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(input.password, 10);
 
-    await this.prisma.user.update({
+    await this.prisma.db.user.update({
       where: { id: tokenRecord.userId },
       data: { passwordHash, activatedAt: new Date() },
     });
@@ -254,7 +254,7 @@ export class AuthService {
       });
     }
 
-    await this.prisma.activationToken.delete({
+    await this.prisma.db.activationToken.delete({
       where: { id: tokenRecord.id },
     });
 
@@ -262,7 +262,7 @@ export class AuthService {
   }
 
   async verifyResetToken(token: string) {
-    const tokenRecord = await this.prisma.activationToken.findUnique({
+    const tokenRecord = await this.prisma.db.activationToken.findUnique({
       where: { token },
       include: { user: true },
     });
@@ -275,7 +275,7 @@ export class AuthService {
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.db.user.findUnique({
       where: { id: userId },
     });
 
@@ -302,7 +302,7 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    await this.prisma.user.update({
+    await this.prisma.db.user.update({
       where: { id: userId },
       data: { passwordHash },
     });
@@ -315,7 +315,7 @@ export class AuthService {
   }
 
   async adminResetPassword(userId: string, newPassword: string, schoolId: string) {
-    const user = await this.prisma.user.findFirst({
+    const user = await this.prisma.db.user.findFirst({
       where: { id: userId, schoolId },
     });
 
@@ -325,7 +325,7 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    await this.prisma.user.update({
+    await this.prisma.db.user.update({
       where: { id: userId },
       data: { passwordHash, activatedAt: new Date() },
     });
@@ -344,7 +344,7 @@ export class AuthService {
     department?: string;
     password?: string;
   }, createdBy: string) {
-    const existing = await this.prisma.user.findUnique({
+    const existing = await this.prisma.db.user.findUnique({
       where: { email: input.email },
     });
 
@@ -352,7 +352,7 @@ export class AuthService {
       throw new ConflictException("Email already registered");
     }
 
-    const school = await this.prisma.school.findUnique({
+    const school = await this.prisma.db.school.findUnique({
       where: { id: schoolId },
     });
 
@@ -389,7 +389,7 @@ export class AuthService {
       userId = randomUUID();
     }
 
-    const user = await this.prisma.user.create({
+    const user = await this.prisma.db.user.create({
       data: {
         id: userId,
         email: input.email,
@@ -409,7 +409,7 @@ export class AuthService {
 
     const activationToken = randomUUID();
 
-    await this.prisma.activationToken.create({
+    await this.prisma.db.activationToken.create({
       data: {
         userId: user.id,
         token: activationToken,
@@ -438,7 +438,7 @@ export class AuthService {
   }
 
   async activateUser(token: string) {
-    const tokenRecord = await this.prisma.activationToken.findUnique({
+    const tokenRecord = await this.prisma.db.activationToken.findUnique({
       where: { token },
       include: { user: true },
     });
@@ -447,12 +447,12 @@ export class AuthService {
       throw new BadRequestException("Invalid or expired activation token");
     }
 
-    await this.prisma.user.update({
+    await this.prisma.db.user.update({
       where: { id: tokenRecord.userId },
       data: { isActive: true, activatedAt: new Date() },
     });
 
-    await this.prisma.activationToken.delete({
+    await this.prisma.db.activationToken.delete({
       where: { id: tokenRecord.id },
     });
 
@@ -460,7 +460,7 @@ export class AuthService {
   }
 
   async listProfiles(schoolId: string) {
-    const users = await this.prisma.user.findMany({
+    const users = await this.prisma.db.user.findMany({
       where: { schoolId },
       include: { roles: true },
       orderBy: { createdAt: "asc" },
@@ -478,7 +478,7 @@ export class AuthService {
   }
 
   async deleteProfile(schoolId: string, userId: string) {
-    const user = await this.prisma.user.findFirst({
+    const user = await this.prisma.db.user.findFirst({
       where: { id: userId, schoolId },
     });
 
@@ -490,12 +490,12 @@ export class AuthService {
       await supabaseAdmin.auth.admin.deleteUser(userId);
     }
 
-    await this.prisma.user.delete({ where: { id: userId } });
+    await this.prisma.db.user.delete({ where: { id: userId } });
     return { ok: true };
   }
 
   async setApproval(schoolId: string, userId: string, approved: boolean) {
-    const user = await this.prisma.user.findFirst({
+    const user = await this.prisma.db.user.findFirst({
       where: { id: userId, schoolId },
     });
 
@@ -503,7 +503,7 @@ export class AuthService {
       throw new NotFoundException("User not found");
     }
 
-    await this.prisma.user.update({
+    await this.prisma.db.user.update({
       where: { id: userId },
       data: { isActive: approved, activatedAt: approved ? new Date() : null },
     });
@@ -512,7 +512,7 @@ export class AuthService {
   }
 
   async assignRole(schoolId: string, userId: string, role: string, action: "add" | "remove") {
-    const user = await this.prisma.user.findFirst({
+    const user = await this.prisma.db.user.findFirst({
       where: { id: userId, schoolId },
     });
 
@@ -521,11 +521,11 @@ export class AuthService {
     }
 
     if (action === "add") {
-      await this.prisma.userRole.create({
+      await this.prisma.db.userRole.create({
         data: { userId, role: role as any },
       }).catch(() => {});
     } else {
-      await this.prisma.userRole.deleteMany({
+      await this.prisma.db.userRole.deleteMany({
         where: { userId, role: role as any },
       });
     }

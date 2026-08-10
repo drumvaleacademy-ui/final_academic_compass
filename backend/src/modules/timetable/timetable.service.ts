@@ -6,7 +6,7 @@ export class TimetableService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(schoolId: string) {
-    const slots = await this.prisma.timetableSlot.findMany({
+    const slots = await this.prisma.db.timetableSlot.findMany({
       where: { schoolId },
       include: {
         class: true,
@@ -48,7 +48,7 @@ export class TimetableService {
     teacherId?: string;
     room?: string;
   }) {
-    const slot = await this.prisma.timetableSlot.upsert({
+    const slot = await this.prisma.db.timetableSlot.upsert({
       where: { id: data.id || "" },
       update: {
         ...data,
@@ -91,7 +91,7 @@ export class TimetableService {
   }
 
   async remove(schoolId: string, id: string) {
-    const slot = await this.prisma.timetableSlot.findFirst({
+    const slot = await this.prisma.db.timetableSlot.findFirst({
       where: { id, schoolId },
     });
 
@@ -99,7 +99,7 @@ export class TimetableService {
       throw new NotFoundException("Timetable slot not found");
     }
 
-    await this.prisma.timetableSlot.delete({ where: { id } });
+    await this.prisma.db.timetableSlot.delete({ where: { id } });
     return { ok: true };
   }
 }

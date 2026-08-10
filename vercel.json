@@ -12,7 +12,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "https://final-academic-compass-backend-en9q-alpha.vercel.app/api/$1",
+      "dest": "https://REPLACE_WITH_NEW_BACKEND_URL/api/$1",
       "methods": ["GET", "POST", "PUT", "PATCH", "DELETE"]
     },
     {

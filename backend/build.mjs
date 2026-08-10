@@ -4,29 +4,32 @@ import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
 import { rm } from "node:fs/promises";
-import { existsSync } from "node:fs";
 import { execSync } from "node:child_process";
 
 globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.resolve(artifactDir, "dist");
-const apiDir = path.resolve(artifactDir, "api");
 const tmpDir = path.resolve(artifactDir, "dist", "tmp");
 
 async function buildAll() {
   await rm(distDir, { recursive: true, force: true });
-  await rm(apiDir, { recursive: true, force: true });
 
   execSync("npx tsc -p tsconfig.json --outDir dist/tmp --incremental false", {
     cwd: artifactDir,
     stdio: "inherit",
   });
 
-  const sharedConfig = {
+  await esbuild({
+    entryPoints: [
+      path.resolve(tmpDir, "index.js"),
+      path.resolve(tmpDir, "seed.js"),
+      path.resolve(tmpDir, "serverless.js"),
+    ],
     platform: "node",
     bundle: true,
     format: "esm",
+    outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
     external: [
@@ -123,32 +126,6 @@ globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
 globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
-  };
-
-  await esbuild({
-    ...sharedConfig,
-    entryPoints: [
-      path.resolve(tmpDir, "index.js"),
-      path.resolve(tmpDir, "seed.js"),
-      path.resolve(tmpDir, "serverless.js"),
-    ],
-    outdir: distDir,
-    outExtension: { ".js": ".mjs" },
-  });
-
-  const serverlessMjs = path.join(distDir, "serverless.mjs");
-  if (!existsSync(serverlessMjs)) {
-    console.error("Expected serverless bundle not found at " + serverlessMjs);
-    process.exit(1);
-  }
-
-  await rm(apiDir, { recursive: true, force: true });
-  await esbuild({
-    ...sharedConfig,
-    entryPoints: [path.resolve(tmpDir, "serverless.js")],
-    outdir: apiDir,
-    entryNames: "index",
-    outExtension: { ".js": ".mjs" },
   });
 
   await rm(tmpDir, { recursive: true, force: true });

@@ -1,11 +1,15 @@
 {
   "version": 2,
   "installCommand": "pnpm install --frozen-lockfile",
+  "functions": {
+    "dist/serverless.mjs": {
+      "runtime": "nodejs20.x"
+    }
+  },
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/index.mjs",
-      "methods": ["GET", "POST", "PUT", "PATCH", "DELETE"]
+      "dest": "/dist/serverless.mjs"
     }
   ]
 }

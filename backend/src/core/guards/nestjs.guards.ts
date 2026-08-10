@@ -19,7 +19,7 @@ export class AuthGuard implements CanActivate {
     const token = authHeader.slice(7);
     try {
       const decoded = jwt.verify(token, process.env.SESSION_SECRET ?? "dev-secret-change-me") as { sub: string };
-      const user = await prisma.user.findUnique({
+      const user = await (prisma as any).user.findUnique({
         where: { id: decoded.sub },
         include: { roles: true },
       });

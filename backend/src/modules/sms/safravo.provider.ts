@@ -31,7 +31,7 @@ export class SafravoSmsProvider implements SmsProvider, OnModuleInit {
     senderId?: string;
   }): Promise<{ success: boolean; providerId?: string; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/sms/send`, {
+      const response: globalThis.Response = await fetch(`${this.baseUrl}/sms/send`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

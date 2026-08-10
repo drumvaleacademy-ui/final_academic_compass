@@ -6,7 +6,8 @@
     "types": ["node"],
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "noEmitOnError": false
+    "noEmitOnError": false,
+    "noImplicitAny": false
   },
   "include": ["."]
 }

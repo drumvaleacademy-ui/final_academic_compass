@@ -20,7 +20,7 @@ function validationError(error: z.ZodError) {
   };
 }
 
-router.post("/marks", authenticateJWT, requireRoles("admin", "principal", "senior_teacher", "teacher", "subject_teacher"), async (req: any, res) => {
+router.post("/marks", authenticateJWT, requireRoles("admin", "principal", "senior_teacher", "teacher", "subject_teacher"), async (req: any, res: any) => {
   try {
     const body = req.body;
     const rows = Array.isArray(body?.rows) ? body.rows : [];

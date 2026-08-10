@@ -69,7 +69,7 @@ async function seedPlatformAdmins() {
     });
 
     if (existingUser) {
-      const hasAdminRole = existingUser.roles.some((r) => r.role === Role.PLATFORM_ADMIN);
+      const hasAdminRole = existingUser.roles.some((r: any) => r.role === Role.PLATFORM_ADMIN);
       await prisma.userRole.upsert({
         where: { userId_role: { userId: existingUser.id, role: Role.PLATFORM_ADMIN } },
         update: {},

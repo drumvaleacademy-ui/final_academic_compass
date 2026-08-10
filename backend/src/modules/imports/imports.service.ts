@@ -19,8 +19,8 @@ export class ImportsService {
       where: { schoolId },
     });
 
-    const studentsByAdm = new Map(students.map((s) => [s.admissionNo, s]));
-    const studentsById = new Map(students.map((s) => [s.id, s]));
+    const studentsByAdm = new Map(students.map((s: any) => [s.admissionNo, s]));
+    const studentsById = new Map(students.map((s: any) => [s.id, s]));
 
     const entriesToUpsert: any[] = [];
     const errors: any[] = [];

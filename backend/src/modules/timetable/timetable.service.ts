@@ -16,7 +16,7 @@ export class TimetableService {
       orderBy: [{ dayOfWeek: "asc" }, { period: "asc" }],
     });
 
-    return slots.map((slot) => ({
+    return slots.map((slot: any) => ({
       id: slot.id,
       schoolId: slot.schoolId,
       classId: slot.classId,

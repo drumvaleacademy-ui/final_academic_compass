@@ -16,7 +16,7 @@ export class ConflictsService {
       orderBy: { createdAt: "desc" },
     });
 
-    return conflicts.map((c) => ({
+     return conflicts.map((c: { id: string; entity: string; entityId: string; field: string; serverValue?: string; incomingValue?: string; incomingBy?: string; incomingDevice?: string; status: string; resolution?: string; customValue?: string; createdAt: Date; resolvedAt?: Date }) => ({
       id: c.id,
       entity: c.entity,
       entityId: c.entityId,

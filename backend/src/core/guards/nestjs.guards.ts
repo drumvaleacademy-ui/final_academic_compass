@@ -33,7 +33,7 @@ export class AuthGuard implements CanActivate {
         email: user.email,
         fullName: user.fullName,
         schoolId: user.schoolId,
-        roles: user.roles.map((r) => r.role),
+        roles: user.roles.map((r: { role: string }) => r.role),
         isActive: user.isActive,
       };
       return true;

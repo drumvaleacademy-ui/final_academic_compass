@@ -51,7 +51,7 @@ export class SmsService {
       take: limit,
     });
 
-    return logs.map((log) => ({
+    return logs.map((log: any) => ({
       id: log.id,
       recipient: log.recipient,
       message: log.message,

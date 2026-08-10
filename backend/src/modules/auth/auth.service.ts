@@ -72,7 +72,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
-        roles: user.roles.map((r) => r.role),
+        roles: user.roles.map((r: { role: string }) => r.role),
         schoolId: user.schoolId,
       },
     };
@@ -150,7 +150,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
-        roles: user.roles.map((r) => r.role),
+        roles: user.roles.map((r: { role: string }) => r.role),
         schoolId: user.schoolId,
       },
       school: {
@@ -363,7 +363,7 @@ export class AuthService {
     const allowedDomains = school.emailDomains;
     if (allowedDomains && allowedDomains.length > 0) {
       const domain = input.email.split("@")[1]?.toLowerCase();
-      if (!domain || !allowedDomains.some((d) => d.toLowerCase() === domain)) {
+      if (!domain || !allowedDomains.some((d: string) => d.toLowerCase() === domain)) {
         throw new BadRequestException("Email domain not allowed for teacher registration");
       }
     }
@@ -466,7 +466,7 @@ export class AuthService {
       orderBy: { createdAt: "asc" },
     });
 
-    return users.map((u) => ({
+    return users.map((u: any) => ({
       id: u.id,
       email: u.email,
       full_name: u.fullName,

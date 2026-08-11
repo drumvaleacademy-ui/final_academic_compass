@@ -1,9 +1,25 @@
 import { PrismaClient } from "@prisma/client";
 
+function prismaDatabaseUrl() {
+  const rawUrl = process.env.DATABASE_URL;
+  if (!rawUrl) return rawUrl;
+
+  try {
+    const url = new URL(rawUrl);
+    if (url.port !== "6543") return rawUrl;
+    if (!url.searchParams.has("pgbouncer")) url.searchParams.set("pgbouncer", "true");
+    if (!url.searchParams.has("connection_limit")) url.searchParams.set("connection_limit", "1");
+    return url.toString();
+  } catch {
+    return rawUrl;
+  }
+}
+
 export class PrismaService extends PrismaClient {
   constructor() {
     super({
       log: ["query", "error", "warn"],
+      ...(prismaDatabaseUrl() ? { datasources: { db: { url: prismaDatabaseUrl() } } } : {}),
     });
   }
 

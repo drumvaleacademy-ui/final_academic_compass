@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { copyFile, rm } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import { execSync } from "node:child_process";
 
 globalThis.require = createRequire(import.meta.url);
@@ -20,17 +20,10 @@ async function buildAll() {
     stdio: "inherit",
   });
 
-  await esbuild({
-    entryPoints: [
-      path.resolve(tmpDir, "index.js"),
-      path.resolve(tmpDir, "seed.js"),
-      path.resolve(tmpDir, "serverless.js"),
-    ],
+  const bundleOptions = {
     platform: "node",
     bundle: true,
     format: "esm",
-    outdir: distDir,
-    outExtension: { ".js": ".mjs" },
     logLevel: "info",
     external: [
       "*.node",
@@ -126,19 +119,25 @@ globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
 globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
+  };
+
+  await esbuild({
+    ...bundleOptions,
+    entryPoints: [
+      path.resolve(tmpDir, "index.js"),
+      path.resolve(tmpDir, "seed.js"),
+    ],
+    outdir: distDir,
+    outExtension: { ".js": ".mjs" },
   });
 
-  const serverlessBundle = path.resolve(distDir, "serverless.mjs");
   const vercelEntry = path.resolve(artifactDir, "api", "index.mjs");
-  await copyFile(serverlessBundle, vercelEntry);
-
-  const serverlessMap = `${serverlessBundle}.map`;
-  const vercelMap = `${vercelEntry}.map`;
-  try {
-    await copyFile(serverlessMap, vercelMap);
-  } catch {
-    // source map is optional
-  }
+  await mkdir(path.dirname(vercelEntry), { recursive: true });
+  await esbuild({
+    ...bundleOptions,
+    entryPoints: [path.resolve(tmpDir, "serverless.js")],
+    outfile: vercelEntry,
+  });
 
   console.log(`[build] Vercel entry written to ${vercelEntry}`);
 

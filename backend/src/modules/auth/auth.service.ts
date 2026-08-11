@@ -42,7 +42,12 @@ export class AuthService {
       });
     } catch (error) {
       console.error("[auth] Sign-in database query failed", error);
-      throw new ServiceUnavailableException("Database unavailable");
+      const details = error as { code?: string; message?: string };
+      throw new ServiceUnavailableException({
+        message: "Database unavailable",
+        code: details.code ?? "UNKNOWN",
+        detail: details.message?.slice(0, 240) ?? "User query failed",
+      });
     }
 
     if (!user) {

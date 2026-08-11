@@ -2,7 +2,9 @@
  * REST API client.
  */
 
-const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN ?? "").replace(/\/$/, "");
+const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN ?? "")
+  .replace(/\/api\/?$/, "")
+  .replace(/\/$/, "");
 const BASE = API_ORIGIN ? `${API_ORIGIN}/api` : "/api";
 
 function isNetworkError(err: unknown): boolean {

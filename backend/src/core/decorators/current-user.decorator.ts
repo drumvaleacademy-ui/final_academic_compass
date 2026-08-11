@@ -1,9 +1,17 @@
 import { createParamDecorator, ExecutionContext } from "@nestjs/common";
-import { AuthenticatedRequest } from "../guards/auth.guard";
+
+type CurrentUserValue = {
+  id: string;
+  email: string;
+  fullName: string;
+  schoolId: string;
+  roles: string[];
+  isActive: boolean;
+};
 
 export const CurrentUser = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext): AuthenticatedRequest["user"] => {
-    const request = ctx.switchToHttp().getRequest<AuthenticatedRequest>();
+  (data: unknown, ctx: ExecutionContext): CurrentUserValue | undefined => {
+    const request = ctx.switchToHttp().getRequest<{ user?: CurrentUserValue }>();
     return request.user;
   }
 );

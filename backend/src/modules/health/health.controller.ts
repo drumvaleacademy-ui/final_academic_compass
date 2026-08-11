@@ -46,7 +46,12 @@ export class HealthController {
       };
     } catch (error) {
       console.error("[health] Database check failed", error);
-      throw new ServiceUnavailableException("Database unavailable");
+      const details = error as { code?: string; message?: string };
+      throw new ServiceUnavailableException({
+        message: "Database unavailable",
+        code: details.code ?? "UNKNOWN",
+        detail: details.message?.slice(0, 240) ?? "Database query failed",
+      });
     }
   }
 }

@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { SchoolLogoIcon } from "@/components/SchoolLogo";
+import { api } from "@/lib/api";
 
 export default function Bootstrap() {
   const [schoolName, setSchoolName] = useState("");
@@ -19,13 +20,7 @@ export default function Bootstrap() {
     e.preventDefault();
     setBusy(true);
     try {
-      const res = await fetch("/api/v2/auth/bootstrap", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ schoolName, adminEmail: email, adminFullName: fullName, adminPassword: password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Bootstrap failed");
+      await api.post("/v2/auth/bootstrap", { schoolName, adminEmail: email, adminFullName: fullName, adminPassword: password });
       toast.success("School initialized successfully");
       setTimeout(() => nav("/auth", { replace: true }), 1000);
     } catch (err: unknown) {

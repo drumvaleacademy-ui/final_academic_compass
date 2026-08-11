@@ -11,6 +11,7 @@ import { useAuth } from "@/store/auth";
 import { useSchool } from "@/store/school";
 import Loading from "@/components/Loading";
 import { SchoolLogoIcon } from "@/components/SchoolLogo";
+import { api } from "@/lib/api";
 
 export default function Auth() {
   const [email, setEmail]           = useState("");
@@ -52,13 +53,7 @@ export default function Auth() {
     e.preventDefault();
     setForgotBusy(true);
     try {
-      const res = await fetch("/api/v2/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: forgotEmail, fullName: forgotFullName }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to process request");
+      await api.post("/v2/auth/forgot-password", { email: forgotEmail, fullName: forgotFullName });
       setForgotSubmitted(true);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to process request";

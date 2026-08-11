@@ -19,6 +19,7 @@ import { AuditModule } from "./audit/audit.module";
 import { ImportsModule } from "./imports/imports.module";
 import { ConflictsModule } from "./conflicts/conflicts.module";
 import { SyncModule } from "./sync/sync.module";
+import { HealthModule } from "./health/health.module";
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { SyncModule } from "./sync/sync.module";
     ImportsModule,
     ConflictsModule,
     SyncModule,
+    HealthModule,
   ],
 })
 export class AppModule {}

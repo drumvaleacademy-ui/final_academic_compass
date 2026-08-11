@@ -1,31 +1,20 @@
 import "./loadEnv";
-import app from "./app";
 import { createNestApp } from "./app.nest";
-import { getStore } from "./lib/store";
 
-let initialization: Promise<void> | null = null;
-
-async function initialize() {
-  await getStore();
-  console.log("[vercel] Database initialized");
-
-  const { expressApp } = await createNestApp();
-  app.use("/api/v2", expressApp);
-  console.log("[vercel] NestJS API mounted at /api/v2");
-}
+let httpApp: any;
 
 async function ensureInitialized() {
-  initialization ??= initialize().catch((err) => {
-    initialization = null;
-    throw err;
-  });
-  return initialization;
+  if (!httpApp) {
+    const nestApp = await createNestApp();
+    httpApp = nestApp.httpApp;
+    console.log("[vercel] NestJS API initialized");
+  }
 }
 
 export default async (req: any, res: any) => {
   try {
     await ensureInitialized();
-    return app(req, res);
+    return httpApp(req, res);
   } catch (err) {
     console.error("[vercel] Failed to initialize API:", err);
     if (!res.headersSent) {

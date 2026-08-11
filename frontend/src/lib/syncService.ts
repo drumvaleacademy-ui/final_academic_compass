@@ -74,7 +74,7 @@ export async function pushMarkEntries(locals: Array<{
   deviceName: string;
 }>): Promise<Array<{ id: string; status: "ok" | "conflict" | "error" }>> {
   try {
-    const result = await api.post<{ results: Array<{ id: string; status: "ok" | "conflict" }> }>("/mark-entries/batch", {
+    const result = await api.post<{ results: Array<{ id: string; status: "ok" | "conflict" }> }>("/v2/marks/batch", {
       entries: locals.map(l => ({
         id: l.id,
         curriculum_id: l.curriculumId,
@@ -106,7 +106,7 @@ export async function pushMarkEntry(local: {
 
 export async function fetchAllMarkEntries(): Promise<RemoteMarkEntry[]> {
   try {
-    return await api.get<RemoteMarkEntry[]>("/mark-entries");
+    return await api.get<RemoteMarkEntry[]>("/v2/marks");
   } catch {
     return [];
   }
@@ -114,7 +114,7 @@ export async function fetchAllMarkEntries(): Promise<RemoteMarkEntry[]> {
 
 export async function fetchAllTimetableSlots(): Promise<RemoteTimetableSlot[]> {
   try {
-    return await api.get<RemoteTimetableSlot[]>("/timetable-slots");
+    return await api.get<RemoteTimetableSlot[]>("/v2/timetable");
   } catch {
     return [];
   }
@@ -122,7 +122,7 @@ export async function fetchAllTimetableSlots(): Promise<RemoteTimetableSlot[]> {
 
 export async function fetchPendingConflicts(): Promise<RemoteConflict[]> {
   try {
-    return await api.get<RemoteConflict[]>("/conflicts?status=pending");
+    return await api.get<RemoteConflict[]>("/v2/conflicts?status=pending");
   } catch {
     return [];
   }
@@ -187,7 +187,7 @@ export async function pushSchoolSnapshot(local: SchoolSnapshot): Promise<"ok" | 
 
 export async function fetchSchoolSnapshot(): Promise<SchoolSnapshot | null> {
   try {
-    const result = await api.get<{ data: SchoolSnapshot | null }>("/sync");
+    const result = await api.get<{ data: SchoolSnapshot | null }>("/v2/sync");
     return result.data;
   } catch {
     return null;

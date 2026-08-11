@@ -78,6 +78,49 @@ export class AuthService {
     };
   }
 
+  async supabaseCallback(input: any) {
+    if (!input?.supabase_uid || !input?.email || !supabaseAdmin) {
+      throw new BadRequestException("Missing Supabase user information");
+    }
+
+    const school = await this.prisma.db.school.findFirst({ orderBy: { createdAt: "asc" } });
+    if (!school) {
+      throw new BadRequestException("School is not initialized");
+    }
+
+    const temporaryPassword = randomUUID().slice(0, 12);
+    const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+    const existing = await this.prisma.db.user.findUnique({ where: { id: input.supabase_uid } });
+
+    if (existing) {
+      await this.prisma.db.user.update({
+        where: { id: existing.id },
+        data: { passwordHash, isActive: true, activatedAt: new Date() },
+      });
+    } else {
+      await this.prisma.db.user.create({
+        data: {
+          id: input.supabase_uid,
+          email: input.email,
+          fullName: input.full_name || input.email,
+          passwordHash,
+          schoolId: school.id,
+          isActive: true,
+          activatedAt: new Date(),
+        },
+      });
+    }
+
+    return {
+      ok: true,
+      temp_password: temporaryPassword,
+      email: input.email,
+      full_name: input.full_name || null,
+      department: input.department || null,
+      approved: true,
+    };
+  }
+
   async bootstrap(input: BootstrapInput) {
     const existingSchool = await this.prisma.db.school.findFirst();
     if (existingSchool) {

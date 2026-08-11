@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/store/auth";
 import { Card } from "@/components/ui/card";
 import Loading from "@/components/Loading";
+import { api } from "@/lib/api";
 
 export default function AuthCallback() {
   const [error, setError] = useState<string | null>(null);
@@ -24,26 +25,14 @@ export default function AuthCallback() {
           throw new Error(supabaseError?.message || "No session found");
         }
 
-        const accessToken = data.session.access_token;
-        const refreshToken = data.session.refresh_token;
         const user = data.session.user;
 
-        const res = await fetch("/api/auth/supabase-callback", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            supabase_uid: user.id,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || null,
-            department: user.user_metadata?.department || null,
-          }),
+        const result = await api.post<{ email: string; temp_password?: string }>("/v2/auth/supabase-callback", {
+          supabase_uid: user.id,
+          email: user.email,
+          full_name: user.user_metadata?.full_name || null,
+          department: user.user_metadata?.department || null,
         });
-
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.message || "Failed to link Supabase account");
 
         await signIn(result.email, result.temp_password || "");
         nav("/", { replace: true });

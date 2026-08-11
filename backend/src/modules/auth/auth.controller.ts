@@ -18,6 +18,12 @@ export class AuthController {
     return this.authService.bootstrap(input);
   }
 
+  @Post("supabase-callback")
+  @HttpCode(HttpStatus.OK)
+  async supabaseCallback(@Body() input: any) {
+    return this.authService.supabaseCallback(input);
+  }
+
    @Get("me")
   @UseGuards(AuthGuard)
   async me(@Req() req: any) {

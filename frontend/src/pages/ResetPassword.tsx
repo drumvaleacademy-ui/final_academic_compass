@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { SchoolLogoIcon } from "@/components/SchoolLogo";
 import { KeyRound, CheckCircle, AlertCircle, Eye, EyeOff, Shield } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 import Loading from "@/components/Loading";
 
 export default function ResetPassword() {
@@ -31,16 +32,7 @@ export default function ResetPassword() {
 
     async function verifyToken() {
       try {
-        const res = await fetch(`/api/v2/auth/verify-reset-token?token=${encodeURIComponent(token)}`, {
-          method: "GET",
-        });
-
-        if (!res.ok) {
-          setStep("invalid");
-          return;
-        }
-
-        const data: { valid: boolean; email: string } = await res.json();
+        const data = await api.get<{ valid: boolean; email: string }>(`/v2/auth/verify-reset-token?token=${encodeURIComponent(token)}`);
         if (data.valid && data.email) {
           setEmail(data.email);
           setStep("form");
@@ -68,17 +60,7 @@ export default function ResetPassword() {
 
     setSubmitting(true);
     try {
-      const res = await fetch("/api/v2/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || "Failed to reset password");
-      }
-
+      await api.post("/v2/auth/reset-password", { token, password });
       toast.success("Password reset successfully!");
       setStep("success");
     } catch (err: unknown) {

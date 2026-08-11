@@ -9,7 +9,8 @@ async function initialize() {
   await getStore();
   console.log("[vercel] Database initialized");
 
-  await createNestApp(app);
+  const { expressApp } = await createNestApp();
+  app.use("/api/v2", expressApp);
   console.log("[vercel] NestJS API mounted at /api/v2");
 }
 

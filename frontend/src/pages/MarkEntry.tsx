@@ -12,11 +12,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Label } from "@/components/ui/label";
 import { gradeFor, type SheetStatus, type ID, type CurriculumId } from "@/lib/schoolData";
 import { AlertTriangle, Cloud, CloudOff, Save, Lock, Upload } from "lucide-react";
+import { FileText } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import type { MarkEntry } from "@/lib/schoolData";
 import * as XLSX from "xlsx";
 
 export default function MarkEntry() {
+  const navigate = useNavigate();
   const { state, activeCurriculum, update, setMarkScore, syncNow } = useSchool();
   const { isTeacher, isSeniorTeacher, isPrincipal, isHod, isReadOnly } = useAuth();
   const [params, setParams] = useSearchParams();
@@ -450,6 +453,12 @@ export default function MarkEntry() {
         description="Enter marks anywhere. Changes queue locally when offline and sync when reconnected."
         actions={
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate("/reports?scope=all")}>
+              <FileText className="h-4 w-4 mr-1" /> All reports
+            </Button>
+            <Button variant="outline" size="sm" disabled={!classId} onClick={() => navigate(`/reports?classId=${encodeURIComponent(classId)}`)}>
+              <FileText className="h-4 w-4 mr-1" /> Class reports
+            </Button>
             <Badge variant="outline" className={state.online ? "border-success text-success" : "border-destructive text-destructive"}>
               {state.online ? <><Cloud className="h-3 w-3 mr-1"/>Online</> : <><CloudOff className="h-3 w-3 mr-1"/>Offline</>}
             </Badge>

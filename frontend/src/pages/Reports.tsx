@@ -10,6 +10,7 @@ import {
 import { Download, FileText, Printer, Calendar, Users, GraduationCap } from "lucide-react";
 import { useSchool } from "@/store/school";
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -70,7 +71,9 @@ const SAMPLE_SUBJECTS: NonNullable<ReportCardProps["subjects"]> = [
 
 export default function Reports() {
   const { state } = useSchool();
-  const [studentId, setStudentId] = useState("");
+  const [searchParams] = useSearchParams();
+  const [studentId, setStudentId] = useState(searchParams.get("studentId") || searchParams.get("student") || "");
+  const classFilter = searchParams.get("classId") || "";
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"learner" | "teacher" | "class" | "subject">("learner");
   const selectedStudent = state.students.find((student) => student.id === studentId);
@@ -87,8 +90,8 @@ export default function Reports() {
       return { id: entry.id, learner: student?.name ?? "Unknown learner", admission: student?.admissionNo ?? "", teacher: teacher?.name ?? "Unassigned", className: classItem?.name ?? "Unassigned", stream: stream?.name ?? "", subject: subject?.name ?? "Unknown subject", exam: exam?.name ?? "Unknown exam", score: entry.score, pending: entry.pending };
     });
     const q = search.trim().toLowerCase();
-    return rows.filter((row) => !q || [row.learner, row.admission, row.teacher, row.className, row.subject, row.exam].some((value) => value.toLowerCase().includes(q))).sort((a, b) => a[sortBy].localeCompare(b[sortBy]));
-  }, [state, search, sortBy]);
+    return rows.filter((row) => (!classFilter || state.classes.find((item) => item.name === row.className)?.id === classFilter) && (!q || [row.learner, row.admission, row.teacher, row.className, row.subject, row.exam].some((value) => value.toLowerCase().includes(q)))).sort((a, b) => a[sortBy].localeCompare(b[sortBy]));
+  }, [state, search, sortBy, classFilter]);
 
   const printReports = () => window.print();
   const exportReports = () => {
@@ -150,25 +153,6 @@ export default function Reports() {
         </div>
       </Card>
 
-      {selectedStudent && (
-      <Card className="p-6">
-        <div className="flex items-center gap-4 mb-4">
-          <SchoolLogoIcon size="lg" />
-          <div>
-            <h2 className="text-xl font-bold">{state.settings.schoolName}</h2>
-            <p className="text-sm text-muted-foreground">
-              {state.settings.academicYear} Academic Year · Report Card
-            </p>
-          </div>
-        </div>
-
-          <ReportCardPreview
-            schoolName={state.settings.schoolName}
-            subjects={[]}
-            year={state.settings.academicYear}
-          />
-      </Card>
-      )}
     </div>
   );
 }

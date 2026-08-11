@@ -9,6 +9,10 @@ import {
   SchoolLogoIcon } from "@/components/SchoolLogo";
 import { Download, FileText, Printer, Calendar, Users, GraduationCap } from "lucide-react";
 import { useSchool } from "@/store/school";
+import { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { api } from "@/lib/api";
 
 interface ReportCardProps {
   schoolName?: string;
@@ -66,6 +70,23 @@ const SAMPLE_SUBJECTS: NonNullable<ReportCardProps["subjects"]> = [
 
 export default function Reports() {
   const { state } = useSchool();
+  const [studentId, setStudentId] = useState("");
+  const selectedStudent = state.students.find((student) => student.id === studentId);
+
+  const sendReportCard = async () => {
+    if (!selectedStudent) { toast.error("Select a student first"); return; }
+    const message = `${selectedStudent.name}'s report card is ready. Results are available in Academic Compass.`;
+    try {
+      await api.post("/v2/sms/report-card", {
+        studentId,
+        message,
+        reportUrl: `${window.location.origin}/reports?student=${encodeURIComponent(studentId)}`,
+      });
+      toast.success("Report card SMS sent to the registered parent contact");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to send report card SMS");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -74,6 +95,11 @@ export default function Reports() {
         description="Generate, view, and print student report cards with official school letterhead."
         actions={
           <div className="flex gap-2">
+            <Select value={studentId} onValueChange={setStudentId}>
+              <SelectTrigger className="w-52"><SelectValue placeholder="Select student" /></SelectTrigger>
+              <SelectContent>{state.students.map((student) => <SelectItem key={student.id} value={student.id}>{student.name}</SelectItem>)}</SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" onClick={sendReportCard} disabled={!selectedStudent}>Send SMS</Button>
             <Button variant="outline" size="sm">
               <Printer className="h-4 w-4 mr-1" />
               Print Preview

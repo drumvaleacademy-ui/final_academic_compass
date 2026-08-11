@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../../core/prisma.service";
 import { SmsProvider } from "./sms.provider";
 import { SafravoSmsProvider } from "./safravo.provider";
@@ -9,6 +9,29 @@ export class SmsService {
 
   constructor(private readonly prisma: PrismaService) {
     this.provider = new SafravoSmsProvider();
+  }
+
+  async sendReportCard(params: { schoolId: string; studentId: string; message: string; reportUrl?: string; triggeredBy: string }) {
+    const recipients = await this.prisma.$queryRaw<Array<{ phone: string | null }>>`
+      SELECT u."phoneNumber" AS phone
+      FROM "student_parents" sp
+      JOIN "parents" p ON p."id" = sp."parentId"
+      JOIN "users" u ON u."id" = p."userId"
+      JOIN "students" s ON s."id" = sp."studentId"
+      WHERE sp."studentId" = ${params.studentId} AND s."schoolId" = ${params.schoolId}
+      ORDER BY sp."createdAt" ASC
+      LIMIT 1
+    `;
+    const recipient = recipients[0]?.phone;
+    if (!recipient) throw new BadRequestException("No parent phone number is registered for this student");
+
+    return this.sendSms({
+      schoolId: params.schoolId,
+      recipient,
+      message: params.reportUrl ? `${params.message} View report: ${params.reportUrl}` : params.message,
+      recipientType: "PARENT",
+      triggeredBy: params.triggeredBy,
+    });
   }
 
   async sendSms(params: {

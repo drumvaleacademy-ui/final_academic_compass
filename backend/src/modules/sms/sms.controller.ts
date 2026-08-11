@@ -25,4 +25,17 @@ export class SmsController {
   async logs(@Request() req: any) {
     return this.smsService.getLogs(req.user.schoolId);
   }
+
+  @Post("report-card")
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async reportCard(@Request() req: any, @Body() body: any) {
+    return this.smsService.sendReportCard({
+      schoolId: req.user.schoolId,
+      studentId: body.studentId,
+      message: body.message,
+      reportUrl: body.reportUrl,
+      triggeredBy: req.user.id,
+    });
+  }
 }

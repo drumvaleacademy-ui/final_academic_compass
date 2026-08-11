@@ -83,8 +83,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!session) { setLoading(false); return; }
     api.get<AppRole[]>("/v2/auth/roles")
-      .then(setRoles)
-      .catch(() => setRoles([]))
+      .then((updatedRoles) => setRoles(updatedRoles.length ? updatedRoles : (session.user as AuthUser & { roles?: AppRole[] }).roles ?? []))
+      .catch(() => setRoles((session.user as AuthUser & { roles?: AppRole[] }).roles ?? []))
       .finally(() => setLoading(false));
   }, [session?.token]);
 

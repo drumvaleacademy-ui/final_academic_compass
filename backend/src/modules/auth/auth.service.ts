@@ -254,16 +254,12 @@ export class AuthService {
   }
 
   async getRoles(userId: string) {
-    const user = await this.prisma.db.user.findUnique({
-      where: { id: userId },
-      include: { roles: true },
-    });
-
-    if (!user) {
-      throw new NotFoundException("User not found");
-    }
-
-    return user.roles.map((r: any) => r.role);
+    const rows = await this.prisma.$queryRaw<Array<{ role: string }>>`
+      SELECT "role"::text AS "role"
+      FROM "user_roles"
+      WHERE "userId" = ${userId}
+    `;
+    return rows.map((row) => row.role);
   }
 
   async forgotPassword(input: ForgotPasswordInput) {

@@ -38,7 +38,6 @@ export class AuthService {
     try {
       user = await this.prisma.db.user.findUnique({
         where: { email: input.email },
-        include: { roles: true },
       });
     } catch (error) {
       console.error("[auth] Sign-in database query failed", error);
@@ -76,6 +75,15 @@ export class AuthService {
     }
 
     const token = this.generateToken(user.id);
+    let roles: Array<{ role: string }> = [];
+    try {
+      roles = await this.prisma.db.userRole.findMany({
+        where: { userId: user.id },
+        select: { role: true },
+      });
+    } catch (error) {
+      console.error("[auth] Sign-in roles query failed", error);
+    }
 
     return {
       token,
@@ -83,7 +91,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
-        roles: user.roles.map((r: { role: string }) => r.role),
+        roles: roles.map((r) => r.role),
         schoolId: user.schoolId,
       },
     };

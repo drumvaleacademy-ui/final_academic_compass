@@ -18,7 +18,11 @@ export default function Classes() {
   const teachers = state.teachers.filter(t => t.curriculumIds.includes(activeCurriculum));
 
   const addClass = () => update((s) => {
-    s.classes.push({ id: `cls_${Date.now()}`, curriculumId: activeCurriculum, name: "New Class" });
+    const existing = s.classes.filter((item) => item.curriculumId === activeCurriculum).length;
+    const name = activeCurriculum === "cbc" ? `Grade ${existing + 1}` : `Form ${existing + 1}`;
+    const id = `cls_${Date.now()}`;
+    s.classes.push({ id, curriculumId: activeCurriculum, name });
+    s.streams.push({ id: `str_${Date.now()}`, classId: id, name: "General" });
   });
   const addStream = (classId: string) => update((s) => {
     s.streams.push({ id: `str_${Date.now()}`, classId, name: "New Stream" });

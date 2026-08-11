@@ -9,7 +9,7 @@ import {
   SchoolLogoIcon } from "@/components/SchoolLogo";
 import { Download, FileText, Printer, Calendar, Users, GraduationCap } from "lucide-react";
 import { useSchool } from "@/store/school";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -71,7 +71,31 @@ const SAMPLE_SUBJECTS: NonNullable<ReportCardProps["subjects"]> = [
 export default function Reports() {
   const { state } = useSchool();
   const [studentId, setStudentId] = useState("");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"learner" | "teacher" | "class" | "subject">("learner");
   const selectedStudent = state.students.find((student) => student.id === studentId);
+
+  const reportRows = useMemo(() => {
+    const rows = state.entries.map((entry) => {
+      const sheet = state.sheets.find((item) => item.id === entry.sheetId);
+      const student = state.students.find((item) => item.id === entry.studentId);
+      const subject = state.subjects.find((item) => item.id === sheet?.subjectId);
+      const exam = state.exams.find((item) => item.id === sheet?.examId);
+      const classItem = state.classes.find((item) => item.id === sheet?.classId || item.id === student?.classId);
+      const stream = state.streams.find((item) => item.id === student?.streamId);
+      const teacher = state.teachers.find((item) => item.id === sheet?.teacherId || item.id === subject?.teacherId);
+      return { id: entry.id, learner: student?.name ?? "Unknown learner", admission: student?.admissionNo ?? "", teacher: teacher?.name ?? "Unassigned", className: classItem?.name ?? "Unassigned", stream: stream?.name ?? "", subject: subject?.name ?? "Unknown subject", exam: exam?.name ?? "Unknown exam", score: entry.score, pending: entry.pending };
+    });
+    const q = search.trim().toLowerCase();
+    return rows.filter((row) => !q || [row.learner, row.admission, row.teacher, row.className, row.subject, row.exam].some((value) => value.toLowerCase().includes(q))).sort((a, b) => a[sortBy].localeCompare(b[sortBy]));
+  }, [state, search, sortBy]);
+
+  const printReports = () => window.print();
+  const exportReports = () => {
+    const csv = ["Learner,Admission,Teacher,Class,Stream,Subject,Exam,Score,Status", ...reportRows.map((row) => [row.learner, row.admission, row.teacher, row.className, row.stream, row.subject, row.exam, row.score ?? "", row.pending ? "Pending" : "Saved"].map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","))].join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a"); link.href = url; link.download = "academic-reports.csv"; link.click(); URL.revokeObjectURL(url);
+  };
 
   const sendReportCard = async () => {
     if (!selectedStudent) { toast.error("Select a student first"); return; }
@@ -100,11 +124,11 @@ export default function Reports() {
               <SelectContent>{state.students.map((student) => <SelectItem key={student.id} value={student.id}>{student.name}</SelectItem>)}</SelectContent>
             </Select>
             <Button variant="outline" size="sm" onClick={sendReportCard} disabled={!selectedStudent}>Send SMS</Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={printReports}>
               <Printer className="h-4 w-4 mr-1" />
               Print Preview
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={exportReports} disabled={!reportRows.length}>
               <Download className="h-4 w-4 mr-1" />
               Export PDF
             </Button>
@@ -112,6 +136,21 @@ export default function Reports() {
         }
       />
 
+      <Card className="p-4 space-y-4">
+        <div className="flex flex-wrap gap-2 items-center">
+          <input className="inline-edit min-w-[220px]" placeholder="Search learner, teacher, class, subject..." value={search} onChange={(event) => setSearch(event.target.value)} />
+          <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="learner">Sort by learner</SelectItem><SelectItem value="teacher">Sort by teacher</SelectItem><SelectItem value="class">Sort by class</SelectItem><SelectItem value="subject">Sort by subject</SelectItem></SelectContent>
+          </Select>
+          <Badge variant="outline">{reportRows.length} result{reportRows.length === 1 ? "" : "s"}</Badge>
+        </div>
+        <div className="overflow-x-auto border rounded-md">
+          <table className="data-table min-w-[980px]"><thead><tr><th>Learner</th><th>Teacher</th><th>Class</th><th>Subject</th><th>Exam</th><th>Score</th><th>Status</th></tr></thead><tbody>{reportRows.length ? reportRows.map((row) => <tr key={row.id}><td><div className="font-medium">{row.learner}</div><div className="text-xs text-muted-foreground">{row.admission}</div></td><td>{row.teacher}</td><td>{row.className} {row.stream && `· ${row.stream}`}</td><td>{row.subject}</td><td>{row.exam}</td><td className="font-semibold">{row.score ?? "Not entered"}</td><td>{row.pending ? <Badge variant="outline">Pending</Badge> : <Badge>Saved</Badge>}</td></tr>) : <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">No report results exist yet. Enter marks to generate reports for each learner.</td></tr>}</tbody></table>
+        </div>
+      </Card>
+
+      {selectedStudent && (
       <Card className="p-6">
         <div className="flex items-center gap-4 mb-4">
           <SchoolLogoIcon size="lg" />
@@ -129,6 +168,7 @@ export default function Reports() {
             year={state.settings.academicYear}
           />
       </Card>
+      )}
     </div>
   );
 }

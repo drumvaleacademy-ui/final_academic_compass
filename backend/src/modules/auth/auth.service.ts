@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from "@nestjs/common";
+import { Injectable, NotFoundException, ConflictException, BadRequestException, ServiceUnavailableException } from "@nestjs/common";
 import { PrismaService } from "../../core/prisma.service";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
@@ -34,10 +34,16 @@ export class AuthService {
   }
 
   async signin(input: SigninInput) {
-    const user = await this.prisma.db.user.findUnique({
-      where: { email: input.email },
-      include: { roles: true },
-    });
+    let user;
+    try {
+      user = await this.prisma.db.user.findUnique({
+        where: { email: input.email },
+        include: { roles: true },
+      });
+    } catch (error) {
+      console.error("[auth] Sign-in database query failed", error);
+      throw new ServiceUnavailableException("Database unavailable");
+    }
 
     if (!user) {
       throw new BadRequestException("Invalid email or password");

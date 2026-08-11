@@ -14,8 +14,8 @@ export async function createNestApp() {
     ],
   });
   app.enableCors({
-    origin: process.env.FRONTEND_URL || true,
-    credentials: true,
+    origin: true,
+    credentials: false,
   });
 
   await app.init();

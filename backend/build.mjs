@@ -136,7 +136,9 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
   await esbuild({
     ...bundleOptions,
     entryPoints: [path.resolve(tmpDir, "serverless.js")],
-    outfile: vercelEntry,
+    outdir: path.dirname(vercelEntry),
+    entryNames: "index",
+    outExtension: { ".js": ".mjs" },
   });
 
   console.log(`[build] Vercel entry written to ${vercelEntry}`);

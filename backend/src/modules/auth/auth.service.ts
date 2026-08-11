@@ -34,11 +34,22 @@ export class AuthService {
   }
 
   async signin(input: SigninInput) {
-    let user;
+    let user: {
+      id: string;
+      email: string;
+      fullName: string;
+      passwordHash: string | null;
+      isActive: boolean;
+      schoolId: string;
+    } | undefined;
     try {
-      user = await this.prisma.db.user.findUnique({
-        where: { email: input.email },
-      });
+      const rows = await this.prisma.$queryRaw<typeof user[]>`
+        SELECT "id", "email", "fullName", "passwordHash", "isActive", "schoolId"
+        FROM "users"
+        WHERE "email" = ${input.email}
+        LIMIT 1
+      `;
+      user = rows[0];
     } catch (error) {
       console.error("[auth] Sign-in database query failed", error);
       const details = error as { code?: string; message?: string };
@@ -77,10 +88,11 @@ export class AuthService {
     const token = this.generateToken(user.id);
     let roles: Array<{ role: string }> = [];
     try {
-      roles = await this.prisma.db.userRole.findMany({
-        where: { userId: user.id },
-        select: { role: true },
-      });
+      roles = await this.prisma.$queryRaw<Array<{ role: string }>>`
+        SELECT "role"::text AS "role"
+        FROM "user_roles"
+        WHERE "userId" = ${user.id}
+      `;
     } catch (error) {
       console.error("[auth] Sign-in roles query failed", error);
     }

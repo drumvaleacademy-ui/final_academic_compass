@@ -31,6 +31,7 @@ interface AuthCtx {
   isSeniorTeacher: boolean;
   isHod: boolean;
   isPrincipal: boolean;
+  isPlatformAdmin: boolean;
   isApproved: boolean;
   isReadOnly: boolean;
   canManageStaff: boolean;
@@ -88,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [session?.token]);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const { token, user } = await api.post<{ token: string; user: AuthUser & { fullName?: string } }>(
+    const { token, user } = await api.post<{ token: string; user: AuthUser & { fullName?: string; roles?: AppRole[] } }>(
       "/v2/auth/signin", { email, password }
     );
     // Normalize camelCase backend response to snake_case AuthUser
@@ -97,6 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       full_name: user.full_name ?? user.fullName ?? null,
     };
     storeSession(token, normalizedUser);
+    setRoles(user.roles ?? []);
   }, []);
 
   const signOut = useCallback(async () => {
@@ -122,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [session]);
 
   const isPrincipal = hasRole("PLATFORM_ADMIN", "PRINCIPAL");
+  const isPlatformAdmin = hasRole("PLATFORM_ADMIN");
   const isTeacher = hasRole("TEACHER", "SENIOR_TEACHER");
   const isSeniorTeacher = hasRole("SENIOR_TEACHER");
   const isHod = hasRole("HOD");
@@ -136,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <Ctx.Provider value={{
       session, user: session?.user ?? null, roles, loading,
       signIn, signOut, hasRole, refreshRoles, refreshProfile,
-      isTeacher, isSeniorTeacher, isHod, isPrincipal, isApproved, isReadOnly,
+      isTeacher, isSeniorTeacher, isHod, isPrincipal, isPlatformAdmin, isApproved, isReadOnly,
       canManageStaff, canManageStudents, canEnterMarks, canEditTimetable,
     }}>
       {children}

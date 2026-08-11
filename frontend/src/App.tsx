@@ -28,6 +28,7 @@ import SettingsPage from "./pages/Settings";
 import Timetable from "./pages/TimeTable";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import SystemAdmin from "./pages/SystemAdmin";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/bootstrap" element={<Bootstrap />} />
               <Route path="/auth" element={<Auth />} />
               <Route element={<ProtectedRoute />}>
+                <Route path="/system-admin" element={<SystemAdmin />} />
                 <Route element={<AppShell />}>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/students" element={<Students />} />

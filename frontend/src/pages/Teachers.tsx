@@ -43,7 +43,7 @@ export default function Teachers() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [department, setDepartment] = useState("");
-  const [role, setRole] = useState<string>("subject_teacher");
+  const [role, setRole] = useState<string>("TEACHER");
   const [password, setPassword] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -80,14 +80,14 @@ export default function Teachers() {
     try {
       const res = await api.post<{ id: string; email: string; full_name: string | null; department: string | null; roles: string[]; temp_password: string }>("/v2/auth/teachers", {
         email: email || `new.teacher.${Date.now()}@school.ac.ke`,
-        full_name: name || "New Teacher",
+        fullName: name || "New Teacher",
         department: department || undefined,
-        role: role as BackendProfile["roles"][number],
+        role,
         password: password || undefined,
       });
       toast.success(`Staff created. Password: ${res.temp_password}`);
       setOpen(false);
-      setName(""); setEmail(""); setDepartment(""); setRole("subject_teacher"); setPassword("");
+      setName(""); setEmail(""); setDepartment(""); setRole("TEACHER"); setPassword("");
       await fetchProfiles();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to create staff member.";
@@ -305,7 +305,7 @@ export default function Teachers() {
                  ) : filteredProfiles.length === 0 ? (
                    <tr><td colSpan={ALL_ROLES.length + 5} className="px-4 md:px-6 py-10 text-center text-muted-foreground">No staff match your search.</td></tr>
                  ) : filteredProfiles.map((p) => {
-                  const isPrincipalRow = p.roles.includes("admin") || p.roles.includes("principal");
+                  const isPrincipalRow = p.roles.some(role => ["PLATFORM_ADMIN", "PRINCIPAL", "admin", "principal"].includes(role));
                   return (
                     <tr key={p.id} className="hover:bg-muted/30 transition">
                       <td className="px-3 md:px-6 py-3 md:py-4 font-medium">{p.full_name || "Unnamed"}</td>

@@ -105,7 +105,11 @@ export class AuthController {
   @Roles("PLATFORM_ADMIN", "PRINCIPAL")
   @HttpCode(HttpStatus.CREATED)
   async createTeacher(@Req() req: any, @Body() input: any) {
-    return this.authService.createTeacher(req.user.schoolId, input, req.user.id);
+    return this.authService.createTeacher(req.user.schoolId, {
+      ...input,
+      fullName: input.fullName ?? input.full_name,
+      role: input.role === "subject_teacher" ? "TEACHER" : input.role,
+    }, req.user.id);
   }
 
   @Post("activate")

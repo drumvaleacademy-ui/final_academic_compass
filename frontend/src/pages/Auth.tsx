@@ -24,15 +24,15 @@ export default function Auth() {
   const [forgotBusy, setForgotBusy] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const nav = useNavigate();
-  const { session, loading, signIn } = useAuth();
+  const { session, loading, signIn, isPlatformAdmin } = useAuth();
   const { state } = useSchool();
   const schoolTag = state.settings.schoolTag;
 
   useEffect(() => {
     if (!loading && session && !signedIn) {
-      nav("/", { replace: true });
+      nav(isPlatformAdmin ? "/system-admin" : "/", { replace: true });
     }
-  }, [session, loading, nav, signedIn]);
+  }, [session, loading, nav, signedIn, isPlatformAdmin]);
 
    const submit = async (e: React.FormEvent) => {
      e.preventDefault();
@@ -40,7 +40,7 @@ export default function Auth() {
      try {
        await signIn(email, password);
        setSignedIn(true);
-       setTimeout(() => nav("/", { replace: true }), 1200);
+      setTimeout(() => nav(isPlatformAdmin ? "/system-admin" : "/", { replace: true }), 1200);
      } catch (err: unknown) {
        const message = err instanceof Error ? err.message : "Authentication failed";
        toast.error(message);

@@ -414,7 +414,7 @@ export class AuthService {
   async createTeacher(schoolId: string, input: {
     email: string;
     fullName: string;
-    role?: string;
+    role?: "PLATFORM_ADMIN" | "PRINCIPAL" | "SENIOR_TEACHER" | "TEACHER";
     department?: string;
     password?: string;
   }, createdBy: string) {
@@ -471,10 +471,10 @@ export class AuthService {
         passwordHash,
         phoneNumber: input.department ?? null,
         schoolId,
-        isActive: false,
+        isActive: true,
         roles: {
           create: [
-            { role: input.role === "SENIOR_TEACHER" ? "SENIOR_TEACHER" : "TEACHER" },
+            { role: input.role ?? "TEACHER" },
           ],
         },
       },

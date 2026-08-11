@@ -1,7 +1,7 @@
 {
   "version": 2,
   "framework": null,
-  "installCommand": "pnpm install",
+  "installCommand": "pnpm install --frozen-lockfile --ignore-scripts --filter @workspace/academic-compass...",
   "builds": [
     {
       "src": "frontend/package.json",

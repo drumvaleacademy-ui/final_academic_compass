@@ -1,7 +1,7 @@
 {
   "version": 2,
   "framework": null,
-  "installCommand": "pnpm install --frozen-lockfile",
+  "installCommand": "pnpm install --frozen-lockfile --ignore-scripts --filter @workspace/academic-compass...",
   "buildCommand": "pnpm run build",
   "outputDirectory": "dist/public"
 }

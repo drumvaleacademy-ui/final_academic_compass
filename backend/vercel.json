@@ -3,12 +3,12 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm run vercel-build",
   "functions": {
-    "api/index.ts": {
+    "api/index.mjs": {
       "runtime": "@vercel/node@5.3.0",
       "maxDuration": 30
     }
   },
   "routes": [
-    { "src": "/(.*)", "dest": "/api/index.ts" }
+    { "src": "/(.*)", "dest": "/api/index.mjs" }
   ]
 }

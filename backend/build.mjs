@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { copyFile, rm } from "node:fs/promises";
 import { execSync } from "node:child_process";
 
 globalThis.require = createRequire(import.meta.url);
@@ -127,6 +127,20 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+
+  const serverlessBundle = path.resolve(distDir, "serverless.mjs");
+  const vercelEntry = path.resolve(artifactDir, "api", "index.mjs");
+  await copyFile(serverlessBundle, vercelEntry);
+
+  const serverlessMap = `${serverlessBundle}.map`;
+  const vercelMap = `${vercelEntry}.map`;
+  try {
+    await copyFile(serverlessMap, vercelMap);
+  } catch {
+    // source map is optional
+  }
+
+  console.log(`[build] Vercel entry written to ${vercelEntry}`);
 
   await rm(tmpDir, { recursive: true, force: true });
 }

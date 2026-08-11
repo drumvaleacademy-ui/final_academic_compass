@@ -3,30 +3,34 @@ import app from "./app";
 import { createNestApp } from "./app.nest";
 import { getStore } from "./lib/store";
 
-let initialized = false;
+let initialization: Promise<void> | null = null;
+
+async function initialize() {
+  await getStore();
+  console.log("[vercel] Database initialized");
+
+  const { router } = await createNestApp();
+  app.use("/api/v2", router);
+  console.log("[vercel] NestJS API mounted at /api/v2");
+}
 
 async function ensureInitialized() {
-  if (initialized) return;
-  initialized = true;
-  try {
-    await getStore();
-    console.log("[vercel] Database initialized");
-  } catch (err) {
-    console.error("[vercel] Failed to initialize database:", err);
-    process.exit(1);
-  }
-
-  try {
-    const { router } = await createNestApp();
-    app.use("/api/v2", router);
-    console.log("[vercel] NestJS API mounted at /api/v2");
-  } catch (err) {
-    console.error("[vercel] Failed to initialize NestJS API:", err);
-    process.exit(1);
-  }
+  initialization ??= initialize().catch((err) => {
+    initialization = null;
+    throw err;
+  });
+  return initialization;
 }
 
 export default async (req: any, res: any) => {
-  await ensureInitialized();
-  app(req, res);
+  try {
+    await ensureInitialized();
+    return app(req, res);
+  } catch (err) {
+    console.error("[vercel] Failed to initialize API:", err);
+    if (!res.headersSent) {
+      return res.status(503).json({ message: "API initialization failed" });
+    }
+    return res.end();
+  }
 };

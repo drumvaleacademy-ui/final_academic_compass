@@ -8,6 +8,8 @@ node_modules/
 
 # Build outputs
 dist/
+backend/api/index.mjs
+backend/api/index.mjs.map
 *.tsbuildinfo
 
 # Local DB / runtime data

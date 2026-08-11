@@ -1,3 +1,6 @@
+-- CreateEnum
+CREATE TYPE "Role" AS ENUM ('PLATFORM_ADMIN', 'PRINCIPAL', 'SENIOR_TEACHER', 'TEACHER', 'PARENT', 'STUDENT');
+
 -- CreateTable
 CREATE TABLE "schools" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),

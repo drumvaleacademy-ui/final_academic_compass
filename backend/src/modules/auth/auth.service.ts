@@ -414,23 +414,24 @@ export class AuthService {
     department?: string;
     password?: string;
   }, createdBy: string) {
-    const existing = await this.prisma.db.user.findUnique({
-      where: { email: input.email },
-    });
+    const existing = await this.prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT "id" FROM "users" WHERE "email" = ${input.email} LIMIT 1
+    `;
 
-    if (existing) {
+    if (existing[0]) {
       throw new ConflictException("Email already registered");
     }
 
-    const school = await this.prisma.db.school.findUnique({
-      where: { id: schoolId },
-    });
+    const schools = await this.prisma.$queryRaw<Array<{ id: string; name: string; emailDomains: string[] | null }>>`
+      SELECT "id", "name", "emailDomains" FROM "schools" WHERE "id" = ${schoolId} LIMIT 1
+    `;
+    const school = schools[0];
 
     if (!school) {
       throw new NotFoundException("School not found");
     }
 
-    const allowedDomains = school.emailDomains;
+    const allowedDomains = school.emailDomains ?? [];
     if (allowedDomains && allowedDomains.length > 0) {
       const domain = input.email.split("@")[1]?.toLowerCase();
       if (!domain || !allowedDomains.some((d: string) => d.toLowerCase() === domain)) {
@@ -459,33 +460,22 @@ export class AuthService {
       userId = randomUUID();
     }
 
-    const user = await this.prisma.db.user.create({
-      data: {
-        id: userId,
-        email: input.email,
-        fullName: input.fullName,
-        passwordHash,
-        phoneNumber: input.department ?? null,
-        schoolId,
-        isActive: true,
-        roles: {
-          create: [
-            { role: input.role ?? "TEACHER" },
-          ],
-        },
-      },
-      include: { roles: true },
-    });
+    const role = input.role ?? "TEACHER";
+    await this.prisma.$executeRaw`
+      INSERT INTO "users" ("id", "email", "fullName", "passwordHash", "phoneNumber", "isActive", "activatedAt", "schoolId")
+      VALUES (${userId}, ${input.email}, ${input.fullName}, ${passwordHash}, ${input.department ?? null}, true, NOW(), ${schoolId})
+    `;
+    await this.prisma.$executeRaw`
+      INSERT INTO "user_roles" ("id", "userId", "role")
+      VALUES (${randomUUID()}, ${userId}, ${role}::"Role")
+    `;
 
     const activationToken = randomUUID();
 
-    await this.prisma.db.activationToken.create({
-      data: {
-        userId: user.id,
-        token: activationToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      },
-    });
+    await this.prisma.$executeRaw`
+      INSERT INTO "ActivationToken" ("id", "userId", "token", "expiresAt")
+      VALUES (${randomUUID()}, ${userId}, ${activationToken}, ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)})
+    `;
 
     const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
 
@@ -498,10 +488,10 @@ export class AuthService {
     });
 
     return {
-      id: user.id,
-      email: user.email,
-      fullName: user.fullName,
-      roles: user.roles.map((r: any) => r.role),
+      id: userId,
+      email: input.email,
+      fullName: input.fullName,
+      roles: [role],
       tempPassword,
       activationToken,
     };

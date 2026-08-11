@@ -29,8 +29,7 @@ if (Number.isNaN(port) || port <= 0) {
   }
 
   try {
-    const { router: nestRouter } = await createNestApp();
-    app.use("/api/v2", nestRouter);
+    await createNestApp(app);
     logger.info("NestJS API mounted at /api/v2");
   } catch (err) {
     logger.error({ err }, "Failed to initialize NestJS API");

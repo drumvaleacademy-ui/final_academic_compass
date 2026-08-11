@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { mkdir, rm } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import { execSync } from "node:child_process";
 
 globalThis.require = createRequire(import.meta.url);
@@ -126,22 +126,13 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     entryPoints: [
       path.resolve(tmpDir, "index.js"),
       path.resolve(tmpDir, "seed.js"),
+      path.resolve(tmpDir, "serverless.js"),
     ],
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
   });
 
-  const vercelEntry = path.resolve(artifactDir, "api", "index.mjs");
-  await mkdir(path.dirname(vercelEntry), { recursive: true });
-  await esbuild({
-    ...bundleOptions,
-    entryPoints: [path.resolve(tmpDir, "serverless.js")],
-    outdir: path.dirname(vercelEntry),
-    entryNames: "index",
-    outExtension: { ".js": ".mjs" },
-  });
-
-  console.log(`[build] Vercel entry written to ${vercelEntry}`);
+  console.log(`[build] Vercel entry written to ${path.resolve(distDir, "serverless.mjs")}`);
 
   await rm(tmpDir, { recursive: true, force: true });
 }

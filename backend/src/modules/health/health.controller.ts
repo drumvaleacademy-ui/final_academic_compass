@@ -28,10 +28,10 @@ export class HealthController {
         profiles: string | null;
       }>>`
         SELECT
-          to_regclass('public.users') AS users,
-          to_regclass('public.user_roles') AS "userRoles",
-          to_regclass('public.schools') AS schools,
-          to_regclass('public.profiles') AS profiles
+          to_regclass('public.users')::text AS users,
+          to_regclass('public.user_roles')::text AS "userRoles",
+          to_regclass('public.schools')::text AS schools,
+          to_regclass('public.profiles')::text AS profiles
       `;
       const schema = rows[0];
       return {

@@ -133,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const canManageStaff = isPrincipal;
   const canManageStudents = isPrincipal || isSeniorTeacher;
   const canEnterMarks = isPrincipal || isSeniorTeacher || isTeacher || isHod;
-  const canEditTimetable = isPrincipal || isSeniorTeacher || isHod;
+  const canEditTimetable = isPrincipal || isSeniorTeacher;
 
   return (
     <Ctx.Provider value={{

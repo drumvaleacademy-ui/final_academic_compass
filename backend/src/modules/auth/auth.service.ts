@@ -530,21 +530,22 @@ export class AuthService {
   }
 
   async listProfiles(schoolId: string) {
-    const users = await this.prisma.db.user.findMany({
-      where: { schoolId },
-      include: { roles: true },
-      orderBy: { createdAt: "asc" },
-    });
-
-    return users.map((u: any) => ({
-      id: u.id,
-      email: u.email,
-      full_name: u.fullName,
-      department: u.phoneNumber ?? null,
-      approved: u.isActive,
-      created_at: u.createdAt.toISOString(),
-      roles: u.roles.map((r: { role: string }) => r.role),
-    }));
+    return this.prisma.$queryRaw<Array<{
+      id: string; email: string; fullName: string; phoneNumber: string | null;
+      isActive: boolean; createdAt: Date; roles: string[] | null;
+    }>>`
+      SELECT u."id", u."email", u."fullName", u."phoneNumber", u."isActive", u."createdAt",
+        COALESCE(array_agg(ur."role"::text) FILTER (WHERE ur."role" IS NOT NULL), ARRAY[]::text[]) AS "roles"
+      FROM "users" u
+      LEFT JOIN "user_roles" ur ON ur."userId" = u."id"
+      WHERE u."schoolId" = ${schoolId}
+      GROUP BY u."id"
+      ORDER BY u."createdAt" ASC
+    `.then((users) => users.map((u) => ({
+      id: u.id, email: u.email, full_name: u.fullName,
+      department: u.phoneNumber, approved: u.isActive,
+      created_at: new Date(u.createdAt).toISOString(), roles: u.roles ?? [],
+    })));
   }
 
   async deleteProfile(schoolId: string, userId: string) {

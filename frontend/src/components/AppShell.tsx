@@ -111,7 +111,7 @@ export default function AppShell() {
   const filteredFooterLinks = FOOTER_LINKS.filter(link => filteredNav.some(n => n.to === link.to));
   const filteredQuickLinks = KEY_QUICK_LINKS.filter(link => filteredNav.some(n => n.to === link.to));
 
-  const pageBgClass = PAGE_BG[location.pathname] || "page-bg-default";
+  const pageBgClass = "page-bg-default";
 
   const SidebarContent = () => (
     <>
@@ -178,7 +178,7 @@ export default function AppShell() {
             </div>
 
              {/* Desktop key quick links */}
-             <nav className="hidden lg:flex items-center gap-1 ml-6">
+             <nav className="hidden">
                {filteredQuickLinks.map((link) => (
                  <NavLink
                    key={link.to}

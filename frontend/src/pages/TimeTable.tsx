@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Lock, Pencil, Trash2, Plus, CalendarDays, Search } from "lucide-react";
+import { Lock, Pencil, Trash2, Plus, CalendarDays, Search, Download } from "lucide-react";
 import { TimetableSlot } from "@/lib/schoolData";
 import { toast } from "sonner";
 
@@ -69,6 +69,22 @@ export default function Timetable() {
     setOpen(false);
   };
 
+  const downloadTimetable = () => {
+    const lines = ["Day,Period,Subject,Teacher,Room,Start,End"];
+    filteredSlots.forEach((slot) => {
+      const subject = state.subjects.find((item) => item.id === slot.subjectId)?.name ?? "";
+      const teacher = state.teachers.find((item) => item.id === slot.teacherId)?.name ?? "";
+      lines.push([DAYS[slot.dayOfWeek - 1], slot.period, subject, teacher, slot.room ?? "", slot.startTime ?? "", slot.endTime ?? ""].map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","));
+    });
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `timetable-${classId || "school"}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
       <PageHeader
@@ -90,6 +106,9 @@ export default function Timetable() {
             <Badge variant="outline" className={canEditTimetable ? "border-success text-success" : ""}>
               {canEditTimetable ? <><Pencil className="h-3 w-3 mr-1"/>Editor</> : <><Lock className="h-3 w-3 mr-1"/>Read only</>}
             </Badge>
+            <Button variant="outline" size="sm" onClick={downloadTimetable} disabled={!filteredSlots.length}>
+              <Download className="h-4 w-4 mr-1" />Download
+            </Button>
           </div>
         }
       />

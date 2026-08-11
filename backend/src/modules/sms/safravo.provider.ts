@@ -4,6 +4,7 @@ import { SmsProvider } from "./sms.provider";
 interface SafravoResponse {
   status: string;
   messageId?: string;
+  message_id?: string;
   error?: string;
 }
 
@@ -19,11 +20,13 @@ interface FetchResponse {
 export class SafravoSmsProvider implements SmsProvider, OnModuleInit {
   private baseUrl: string;
   private apiKey: string;
+  private partnerId: string;
   private senderId: string;
 
   constructor() {
-    this.baseUrl = process.env.SMS_PROVIDER_URL || "https://api.safravo.com/v1";
+    this.baseUrl = (process.env.SMS_PROVIDER_URL || "https://api.safravo.co.ke").replace(/\/$/, "");
     this.apiKey = process.env.SMS_API_KEY || "";
+    this.partnerId = process.env.SMS_PARTNER_ID || "";
     this.senderId = process.env.SMS_SENDER_ID || "ACCompass";
   }
 
@@ -40,17 +43,18 @@ export class SafravoSmsProvider implements SmsProvider, OnModuleInit {
   }): Promise<{ success: boolean; providerId?: string; error?: string }> {
     try {
       const response = await (fetch as (url: string, init?: object) => Promise<FetchResponse>)(
-        `${this.baseUrl}/sms/send`,
+        `${this.baseUrl}/sms/v1/messages`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${this.apiKey}`,
           },
           body: JSON.stringify({
-            to: params.to,
+            apikey: this.apiKey,
+            partnerID: this.partnerId,
+            mobile: params.to,
             message: params.message,
-            sender_id: params.senderId || this.senderId,
+            shortcode: params.senderId || this.senderId,
           }),
         }
       );
@@ -60,7 +64,7 @@ export class SafravoSmsProvider implements SmsProvider, OnModuleInit {
       if (response.ok && data.status === "success") {
         return {
           success: true,
-          providerId: data.messageId,
+          providerId: data.messageId || data.message_id,
         };
       }
 

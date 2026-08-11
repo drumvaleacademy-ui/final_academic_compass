@@ -97,18 +97,11 @@ export default function Reports() {
           </div>
         </div>
 
-        <ReportCardPreview
-          schoolName={state.settings.schoolName}
-          studentName="Amina Wanjiru Ochieng"
-          admissionNumber="ADM/00452/2024"
-          className="8 West"
-          stream="Blue"
-          term="Term 2"
-          year={2024}
-          subjects={SAMPLE_SUBJECTS}
-          teacherName="Mr. David Mwangi"
-          principalName="Mrs. Sarah Akinyi"
-        />
+          <ReportCardPreview
+            schoolName={state.settings.schoolName}
+            subjects={[]}
+            year={state.settings.academicYear}
+          />
       </Card>
     </div>
   );
@@ -119,7 +112,7 @@ function ReportCardPreview(props: ReportCardProps) {
   const maxTotal = 200;
   const totalObtained = (props.subjects || []).reduce((sum, s) => sum + s.total, 0);
   const totalPossible = (props.subjects || []).filter((s) => s.grade !== "-").length * maxTotal;
-  const percentage = Math.round((totalObtained / totalPossible) * 100);
+  const percentage = totalPossible > 0 ? Math.round((totalObtained / totalPossible) * 100) : 0;
   const overallGrade = gradeFor(percentage);
 
   const gradeDescriptions: Record<string, string> = {
@@ -218,7 +211,7 @@ function ReportCardPreview(props: ReportCardProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(props.subjects || SAMPLE_SUBJECTS).map((subj, idx) => {
+                {(props.subjects ?? []).map((subj, idx) => {
                   const isOptional = subj.grade === "-";
                   return (
                     <TableRow key={subj.code} className={isOptional ? "opacity-60" : ""}>

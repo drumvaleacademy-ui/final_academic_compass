@@ -23,13 +23,11 @@ interface ProfileItem {
 }
 
 const ALL_ROLES = [
-  { value: "admin", label: "Admin" },
-  { value: "principal", label: "Principal" },
-  { value: "hod", label: "Head of Department" },
-  { value: "class_teacher", label: "Class Teacher" },
-  { value: "subject_teacher", label: "Subject Teacher" },
-  { value: "teacher", label: "Teacher" },
-  { value: "senior_teacher", label: "Senior Teacher" },
+  { value: "PLATFORM_ADMIN", label: "Platform Admin" },
+  { value: "PRINCIPAL", label: "Principal" },
+  { value: "HOD", label: "Head of Department" },
+  { value: "TEACHER", label: "Teacher" },
+  { value: "SENIOR_TEACHER", label: "Senior Teacher" },
 ] as const;
 
 export default function Profile() {
@@ -311,7 +309,7 @@ export default function Profile() {
                 ) : filteredProfiles.length === 0 ? (
                   <tr><td colSpan={ALL_ROLES.length + 5} className="px-4 md:px-6 py-10 text-center text-muted-foreground">No staff match your search.</td></tr>
                 ) : filteredProfiles.map((p) => {
-                  const isPrincipalRow = p.roles.includes("admin") || p.roles.includes("principal");
+                  const isPrincipalRow = p.roles.some(role => ["PLATFORM_ADMIN", "PRINCIPAL", "admin", "principal"].includes(role));
                   const isLocal = p.isLocal;
                   return (
                     <tr key={p.id} className="hover:bg-muted/30 transition">

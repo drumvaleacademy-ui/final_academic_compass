@@ -25,6 +25,12 @@ export class AuthService {
     private readonly emailService: EmailService,
   ) {}
 
+  // Safe accessor: some runtime builds may not expose `prisma.db` getter,
+  // so fall back to the PrismaService instance itself.
+  private get db(): any {
+    return (this.prisma as any).db ?? (this.prisma as any);
+  }
+
   private generateToken(userId: string): string {
     return jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: "30d" });
   }
@@ -114,22 +120,22 @@ export class AuthService {
       throw new BadRequestException("Missing Supabase user information");
     }
 
-    const school = await this.prisma.db.school.findFirst({ orderBy: { createdAt: "asc" } });
+    const school = await this.db.school.findFirst({ orderBy: { createdAt: "asc" } });
     if (!school) {
       throw new BadRequestException("School is not initialized");
     }
 
     const temporaryPassword = randomUUID().slice(0, 12);
     const passwordHash = await bcrypt.hash(temporaryPassword, 10);
-    const existing = await this.prisma.db.user.findUnique({ where: { id: input.supabase_uid } });
+    const existing = await this.db.user.findUnique({ where: { id: input.supabase_uid } });
 
     if (existing) {
-      await this.prisma.db.user.update({
+      await this.db.user.update({
         where: { id: existing.id },
         data: { passwordHash, isActive: true, activatedAt: new Date() },
       });
     } else {
-      await this.prisma.db.user.create({
+      await this.db.user.create({
         data: {
           id: input.supabase_uid,
           email: input.email,
@@ -153,12 +159,21 @@ export class AuthService {
   }
 
   async bootstrap(input: BootstrapInput) {
-    const existingSchool = await this.prisma.db.school.findFirst();
+    // debug: check prisma injection
+    try {
+      console.error("DEBUG auth.bootstrap typeof prisma:", typeof this.prisma);
+      console.error("DEBUG auth.bootstrap prisma keys:", this.prisma ? Object.getOwnPropertyNames(this.prisma) : null);
+      console.error("DEBUG auth.bootstrap prisma prototype:", this.prisma ? Object.getOwnPropertyNames(Object.getPrototypeOf(this.prisma)) : null);
+      console.error("DEBUG auth.bootstrap prisma.db:", !!(this.prisma as any)?.db);
+    } catch (err) {
+      console.error("DEBUG auth.bootstrap logging failed", err);
+    }
+    const existingSchool = await this.db.school.findFirst();
     if (existingSchool) {
       throw new ConflictException("School already initialized");
     }
 
-    const school = await this.prisma.db.school.create({
+    const school = await this.db.school.create({
       data: {
         name: input.schoolName,
         code: input.schoolName.toLowerCase().replace(/\s+/g, "-"),
@@ -189,7 +204,7 @@ export class AuthService {
       userEmail = input.adminEmail;
     }
 
-    const user = await this.prisma.db.user.create({
+    const user = await this.db.user.create({
       data: {
         id: userId,
         email: userEmail,
@@ -235,7 +250,7 @@ export class AuthService {
   }
 
   async me(userId: string) {
-    const user = await this.prisma.db.user.findUnique({
+    const user = await this.db.user.findUnique({
       where: { id: userId },
       include: { roles: true },
     });
@@ -263,7 +278,7 @@ export class AuthService {
   }
 
   async forgotPassword(input: ForgotPasswordInput) {
-    const user = await this.prisma.db.user.findUnique({
+    const user = await this.db.user.findUnique({
       where: { email: input.email },
     });
 
@@ -280,11 +295,11 @@ export class AuthService {
 
     const token = randomUUID();
 
-    await this.prisma.db.activationToken.deleteMany({
+    await this.db.activationToken.deleteMany({
       where: { userId: user.id },
     });
 
-    await this.prisma.db.activationToken.create({
+    await this.db.activationToken.create({
       data: {
         userId: user.id,
         token,
@@ -302,7 +317,7 @@ export class AuthService {
   }
 
   async resetPassword(input: ResetPasswordInput) {
-    const tokenRecord = await this.prisma.db.activationToken.findUnique({
+    const tokenRecord = await this.db.activationToken.findUnique({
       where: { token: input.token },
       include: { user: true },
     });
@@ -313,7 +328,7 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(input.password, 10);
 
-    await this.prisma.db.user.update({
+    await this.db.user.update({
       where: { id: tokenRecord.userId },
       data: { passwordHash, activatedAt: new Date() },
     });
@@ -324,7 +339,7 @@ export class AuthService {
       });
     }
 
-    await this.prisma.db.activationToken.delete({
+    await this.db.activationToken.delete({
       where: { id: tokenRecord.id },
     });
 
@@ -332,7 +347,7 @@ export class AuthService {
   }
 
   async verifyResetToken(token: string) {
-    const tokenRecord = await this.prisma.db.activationToken.findUnique({
+    const tokenRecord = await this.db.activationToken.findUnique({
       where: { token },
       include: { user: true },
     });
@@ -345,7 +360,7 @@ export class AuthService {
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
-    const user = await this.prisma.db.user.findUnique({
+    const user = await this.db.user.findUnique({
       where: { id: userId },
     });
 
@@ -372,7 +387,7 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    await this.prisma.db.user.update({
+    await this.db.user.update({
       where: { id: userId },
       data: { passwordHash },
     });
@@ -385,7 +400,7 @@ export class AuthService {
   }
 
   async adminResetPassword(userId: string, newPassword: string, schoolId: string) {
-    const user = await this.prisma.db.user.findFirst({
+    const user = await this.db.user.findFirst({
       where: { id: userId, schoolId },
     });
 
@@ -395,7 +410,7 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    await this.prisma.db.user.update({
+    await this.db.user.update({
       where: { id: userId },
       data: { passwordHash, activatedAt: new Date() },
     });
@@ -472,10 +487,14 @@ export class AuthService {
 
     const activationToken = randomUUID();
 
-    await this.prisma.$executeRaw`
-      INSERT INTO "ActivationToken" ("id", "userId", "token", "expiresAt")
-      VALUES (${randomUUID()}, ${userId}, ${activationToken}, ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)})
-    `;
+    await this.prisma.db.activationToken.create({
+      data: {
+        id: randomUUID(),
+        userId,
+        token: activationToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
 
     const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
 
@@ -539,7 +558,7 @@ export class AuthService {
   }
 
   async deleteProfile(schoolId: string, userId: string) {
-    const user = await this.prisma.db.user.findFirst({
+    const user = await this.db.user.findFirst({
       where: { id: userId, schoolId },
     });
 
@@ -582,11 +601,11 @@ export class AuthService {
     }
 
     if (action === "add") {
-      await this.prisma.db.userRole.create({
+      await this.db.userRole.create({
         data: { userId, role: role as any },
       }).catch(() => {});
     } else {
-      await this.prisma.db.userRole.deleteMany({
+      await this.db.userRole.deleteMany({
         where: { userId, role: role as any },
       });
     }

@@ -36,6 +36,7 @@ const ALL_ROLES = [
 
 export default function Teachers() {
   const { isPrincipal } = useAuth();
+  const { saveDetails } = useSchool();
   const fileRef = useRef<HTMLInputElement>(null);
   const [backendProfiles, setBackendProfiles] = useState<BackendProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(false);
@@ -203,6 +204,7 @@ export default function Teachers() {
               <Button variant="outline" onClick={() => fileRef.current?.click()}>
                 <Upload className="h-4 w-4 mr-1"/>Import
               </Button>
+              <Button variant="secondary" size="sm" onClick={() => saveDetails?.()}>Save details</Button>
               <input ref={fileRef} type="file" accept=".xlsx,.csv" className="hidden" onChange={importTeachers} />
               <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild>

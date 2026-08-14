@@ -7,7 +7,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 
 export default function Subjects() {
-  const { state, activeCurriculum, update } = useSchool();
+  const { state, activeCurriculum, update, saveDetails } = useSchool();
   const [searchQuery, setSearchQuery] = useState("");
   const subjects = state.subjects.filter(s => {
     const q = searchQuery.trim().toLowerCase();
@@ -42,6 +42,7 @@ export default function Subjects() {
               )}
             </div>
             <Button onClick={add}><Plus className="h-4 w-4 mr-1"/>Add subject</Button>
+            <Button variant="secondary" size="sm" onClick={() => saveDetails?.()}>Save details</Button>
           </div>
         } />
       <Card className="overflow-x-auto card-pad">

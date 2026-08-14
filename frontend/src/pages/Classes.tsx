@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 
 export default function Classes() {
-  const { state, activeCurriculum, update } = useSchool();
+  const { state, activeCurriculum, update, saveDetails } = useSchool();
   const [searchQuery, setSearchQuery] = useState("");
   const classes = state.classes.filter(c => {
     const q = searchQuery.trim().toLowerCase();
@@ -50,6 +50,7 @@ export default function Classes() {
               )}
             </div>
             <Button onClick={addClass}><Plus className="h-4 w-4 mr-1"/>Add class</Button>
+            <Button variant="secondary" size="sm" onClick={() => saveDetails?.()}>Save details</Button>
           </div>
         }
       />

@@ -23,7 +23,7 @@ const ADMISSION_PATTERN = /^(ADM|ADMISSION|STUDENT|LEARNER|PUPIL)?[\s:\-#/]*([A-
 const NAME_PATTERN = /^[A-Za-z][A-Za-z\s\.\'\-]{1,60}$/i;
 
 export default function Students() {
-  const { state, activeCurriculum, update } = useSchool();
+  const { state, activeCurriculum, update, saveDetails } = useSchool();
   const { canManageStudents } = useAuth();
   const [q, setQ] = useState("");
   const [classFilter, setClassFilter] = useState<string>("all");
@@ -218,10 +218,14 @@ export default function Students() {
         description={canManageStudents
           ? "Manage learners in the selected curriculum. Click any field to edit."
           : "View-only. Only the Principal or Senior Teacher can add, edit, or remove learners."}
-        actions={canManageStudents
-          ? <Button onClick={addStudent}><Plus className="h-4 w-4 mr-1"/>Add student</Button>
-          : <Badge variant="outline"><Lock className="h-3 w-3 mr-1"/>Read only</Badge>
-        }
+        actions={canManageStudents ? (
+          <div className="flex items-center gap-2">
+            <Button onClick={addStudent}><Plus className="h-4 w-4 mr-1"/>Add student</Button>
+            <Button variant="secondary" size="sm" onClick={() => saveDetails?.()}>Save details</Button>
+          </div>
+        ) : (
+          <Badge variant="outline"><Lock className="h-3 w-3 mr-1"/>Read only</Badge>
+        )}
       />
 
       <div className="flex flex-wrap gap-2 mb-3">

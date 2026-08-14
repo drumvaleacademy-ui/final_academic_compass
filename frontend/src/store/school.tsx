@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from "react";
+import { pushSchoolSnapshot, fetchPendingConflicts, resolveRemoteConflict } from "@/lib/syncService";
+import { toast } from "sonner";
 
 export interface GradeBand {
   grade: string;
@@ -176,6 +178,7 @@ interface SchoolContextValue {
   removeTimetableSlot: (id: string) => void;
   resolveConflict: (id: string, resolution: string | undefined, customValue?: string | undefined) => void;
   bulkResolveConflicts: (resolution: string) => void;
+  saveDetails: () => Promise<void>;
 }
 
 const defaultState: SchoolState = {
@@ -248,12 +251,121 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     setActiveCurriculum,
     update,
     setMarkScore: () => {},
-    syncNow: () => {},
-    upsertTimetableSlot: () => {},
-    removeTimetableSlot: () => {},
-    resolveConflict: () => {},
-    bulkResolveConflicts: () => {},
+    syncNow: async () => {
+      // simple sync: push full snapshot for now
+      try {
+        const snap = {
+          students: state.students,
+          teachers: state.teachers,
+          classes: state.classes,
+          streams: state.streams,
+          subjects: state.subjects,
+          exams: state.exams,
+          sheets: state.sheets,
+          curricula: state.curricula,
+          settings: state.settings,
+          classRemarks: [],
+          principalRemarks: [],
+          deletedIds: state.deletedIds,
+        };
+        const res = await pushSchoolSnapshot(snap);
+        if (res === "ok") {
+          setState(prev => ({ ...prev, lastSyncAt: new Date().toISOString(), syncQueue: [] }));
+          toast.success("Sync successful");
+        } else {
+          toast.error("Sync failed");
+        }
+      } catch (err) {
+        toast.error("Sync failed");
+      }
+    },
+    upsertTimetableSlot: (slot: TimetableItem) => {
+      setState(prev => {
+        const next = { ...prev };
+        const idx = next.timetable.findIndex(t => t.id === slot.id);
+        if (idx >= 0) next.timetable[idx] = slot;
+        else next.timetable.push(slot);
+        return next;
+      });
+    },
+    removeTimetableSlot: (id: string) => {
+      setState(prev => ({ ...prev, timetable: prev.timetable.filter(t => t.id !== id) }));
+    },
+    resolveConflict: async (id: string, resolution: string | undefined, customValue?: string) => {
+      try {
+        await resolveRemoteConflict(id, (resolution as any) || "server", customValue);
+        setState(prev => ({ ...prev, conflicts: prev.conflicts.map(c => c.id === id ? { ...c, status: "resolved", resolution: resolution ?? "server", customValue } : c) }));
+        toast.success("Conflict resolved");
+      } catch (err) {
+        toast.error("Failed to resolve conflict");
+      }
+    },
+    bulkResolveConflicts: async (resolution: string) => {
+      const pending = state.conflicts.filter(c => c.status === "pending");
+      for (const c of pending) {
+        try {
+          await resolveRemoteConflict(c.id, resolution as any);
+        } catch {}
+      }
+      setState(prev => ({ ...prev, conflicts: prev.conflicts.map(c => c.status === "pending" ? { ...c, status: "resolved", resolution } : c) }));
+      toast.success("Bulk conflict resolution submitted");
+    },
+    saveDetails: async () => {
+      if (!confirm("Save current details to server? This will push students, classes, subjects, teachers, exams, sheets and timetable.")) return;
+      try {
+        const snap = {
+          students: state.students,
+          teachers: state.teachers,
+          classes: state.classes,
+          streams: state.streams,
+          subjects: state.subjects,
+          exams: state.exams,
+          sheets: state.sheets,
+          curricula: state.curricula,
+          settings: state.settings,
+          classRemarks: [],
+          principalRemarks: [],
+          deletedIds: state.deletedIds,
+        };
+        const res = await pushSchoolSnapshot(snap);
+        if (res === "ok") {
+          setState(prev => ({ ...prev, lastSyncAt: new Date().toISOString() }));
+          toast.success("Details saved");
+        } else {
+          toast.error("Failed to save details");
+        }
+      } catch (err) {
+        toast.error("Failed to save details");
+      }
+    },
   };
+
+  // listen to online/offline events and refresh conflicts when online
+  useEffect(() => {
+    const onOnline = async () => {
+      setState(prev => ({ ...prev, online: true }));
+      try {
+        const conflicts = await fetchPendingConflicts();
+        setState(prev => ({ ...prev, conflicts }));
+      } catch {}
+    };
+    const onOffline = () => setState(prev => ({ ...prev, online: false }));
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    // initial fetch when starting online
+    if (state.online) {
+      (async () => {
+        try {
+          const conflicts = await fetchPendingConflicts();
+          setState(prev => ({ ...prev, conflicts }));
+        } catch {}
+      })();
+    }
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

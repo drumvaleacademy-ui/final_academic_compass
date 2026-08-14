@@ -90,7 +90,8 @@ export default function Reports() {
       return { id: entry.id, learner: student?.name ?? "Unknown learner", admission: student?.admissionNo ?? "", teacher: teacher?.name ?? "Unassigned", className: classItem?.name ?? "Unassigned", stream: stream?.name ?? "", subject: subject?.name ?? "Unknown subject", exam: exam?.name ?? "Unknown exam", score: entry.score, pending: entry.pending };
     });
     const q = search.trim().toLowerCase();
-    return rows.filter((row) => (!classFilter || state.classes.find((item) => item.name === row.className)?.id === classFilter) && (!q || [row.learner, row.admission, row.teacher, row.className, row.subject, row.exam].some((value) => value.toLowerCase().includes(q)))).sort((a, b) => a[sortBy].localeCompare(b[sortBy]));
+    const sortKey = sortBy as "learner" | "teacher" | "className" | "subject";
+    return rows.filter((row) => (!classFilter || state.classes.find((item) => item.name === row.className)?.id === classFilter) && (!q || [row.learner, row.admission, row.teacher, row.className, row.subject, row.exam].some((value) => value.toLowerCase().includes(q)))).sort((a, b) => a[sortKey].localeCompare(b[sortKey]));
   }, [state, search, sortBy, classFilter]);
 
   const printReports = () => window.print();

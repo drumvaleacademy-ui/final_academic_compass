@@ -21,6 +21,13 @@ export class PrismaService extends PrismaClient {
       log: ["query", "error", "warn"],
       ...(prismaDatabaseUrl() ? { datasources: { db: { url: prismaDatabaseUrl() } } } : {}),
     });
+
+    Object.defineProperty(this, "db", {
+      value: this,
+      enumerable: false,
+      configurable: true,
+      writable: false,
+    });
   }
 
   /**

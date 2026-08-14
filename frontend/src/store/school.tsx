@@ -228,6 +228,7 @@ const Ctx = createContext<SchoolContextValue>({
   removeTimetableSlot: () => {},
   resolveConflict: () => {},
   bulkResolveConflicts: () => {},
+  saveDetails: async () => {},
 });
 
 export function SchoolProvider({ children }: { children: ReactNode }) {
@@ -312,6 +313,18 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     },
     saveDetails: async () => {
       if (!confirm("Save current details to server? This will push students, classes, subjects, teachers, exams, sheets and timetable.")) return;
+
+      const hasToken = typeof window !== "undefined" && !!localStorage.getItem("ac_token");
+      if (!hasToken) {
+        toast.error("Sign in before saving details.");
+        return;
+      }
+
+      if (!state.online) {
+        toast.error("You are offline. Save details when internet is available.");
+        return;
+      }
+
       try {
         const snap = {
           students: state.students,
@@ -332,10 +345,11 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
           setState(prev => ({ ...prev, lastSyncAt: new Date().toISOString() }));
           toast.success("Details saved");
         } else {
-          toast.error("Failed to save details");
+          toast.error("Failed to save details. Check your connection and sign-in status.");
         }
       } catch (err) {
-        toast.error("Failed to save details");
+        const message = err instanceof Error ? err.message : "Failed to save details.";
+        toast.error(message);
       }
     },
   };

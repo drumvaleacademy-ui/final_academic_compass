@@ -180,7 +180,8 @@ export async function pushSchoolSnapshot(local: SchoolSnapshot): Promise<"ok" | 
   try {
     await api.post("/v2/sync", local);
     return "ok";
-  } catch {
+  } catch (err) {
+    console.error("Save details sync failed:", err);
     return "error";
   }
 }

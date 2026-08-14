@@ -28,7 +28,8 @@ export class AuthService {
   // Safe accessor: some runtime builds may not expose `prisma.db` getter,
   // so fall back to the PrismaService instance itself.
   private get db(): any {
-    return (this.prisma as any).db ?? (this.prisma as any);
+    const maybeDb = (this.prisma as any)?.db;
+    return maybeDb && typeof maybeDb === "object" ? maybeDb : (this.prisma as any);
   }
 
   private generateToken(userId: string): string {

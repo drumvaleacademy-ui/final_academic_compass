@@ -9,21 +9,14 @@
       "config": { "distDir": "dist/public" }
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "https://final-academic-compass-backend.vercel.app/api/$1",
-      "methods": ["GET", "POST", "PUT", "PATCH", "DELETE"]
+      "source": "/api/:path*",
+      "destination": "https://final-academic-compass-backend.vercel.app/api/:path*"
     },
     {
-      "src": "/(.*)",
-      "dest": "/$1",
-      "continue": true
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html",
-      "methods": ["GET"]
+      "source": "/:path*",
+      "destination": "/index.html"
     }
   ]
 }

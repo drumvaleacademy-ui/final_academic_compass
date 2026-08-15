@@ -21,8 +21,10 @@ export class SyncController {
     } catch (err) {
       // Log error server-side for debugging and return a clearer message to client
       console.error('[sync] mergeSnapshot failed for schoolId=', req.user?.schoolId, err);
-      // Throw a NestJS error with the original message so client can see details
-      throw new (require('@nestjs/common').InternalServerErrorException)(err?.message ?? 'Sync failed');
+      // Safely extract message from unknown error
+      const msg = err && typeof (err as any)?.message === 'string' ? (err as any).message : 'Sync failed';
+      // Throw a NestJS error with the derived message so client can see details
+      throw new (require('@nestjs/common').InternalServerErrorException)(msg);
     }
   }
 }

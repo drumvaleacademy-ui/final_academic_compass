@@ -35,8 +35,19 @@ async function request<T>(
     });
 
     if (!res.ok) {
+      // If the token is invalid or missing, clear local session, emit event and surface a clear error.
+      if (res.status === 401 || res.status === 403) {
+        try {
+          localStorage.removeItem("ac_token");
+          localStorage.removeItem("ac_user");
+        } catch (_e) {}
+        try {
+          window.dispatchEvent(new CustomEvent("ac:unauthorized"));
+        } catch (_e) {}
+      }
       const err = await res.json().catch(() => ({ message: res.statusText || `HTTP ${res.status}` }));
-      throw new Error(err.message || `Request failed (${res.status})`);
+      const msg = err.message || `Request failed (${res.status})`;
+      throw new Error(res.status === 401 || res.status === 403 ? `Unauthorized: ${msg}` : msg);
     }
     return res.json();
   } catch (err) {

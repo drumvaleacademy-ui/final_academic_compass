@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 export type AppRole = "PLATFORM_ADMIN" | "PRINCIPAL" | "SENIOR_TEACHER" | "TEACHER" | "PARENT" | "STUDENT" | "HOD";
 
@@ -78,6 +79,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(USER_KEY);
     setSession(null);
     setRoles([]);
+    try {
+      // Redirect user to sign-in page after clearing session
+      if (typeof window !== "undefined") window.location.replace("/auth");
+    } catch (_e) {}
   };
 
   useEffect(() => {
@@ -87,6 +92,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .catch(() => setRoles((session.user as AuthUser & { roles?: AppRole[] }).roles ?? []))
       .finally(() => setLoading(false));
   }, [session?.token]);
+
+  // Listen for global unauthorized events emitted by the API client.
+  useEffect(() => {
+    const onUnauthorized = () => {
+      // Clear client-side session and notify user
+      clearSession();
+      toast.error("Session expired. Please sign in again.", {
+        action: {
+          label: "Sign out",
+          onClick: () => {
+            clearSession();
+          },
+        },
+      });
+    };
+    window.addEventListener("ac:unauthorized", onUnauthorized as EventListener);
+    return () => window.removeEventListener("ac:unauthorized", onUnauthorized as EventListener);
+  }, []);
+
+  // Inactivity auto-logout
+  useEffect(() => {
+    const stored = Number(localStorage.getItem("ac_auto_logout_ms") ?? "0");
+    const timeoutMs = stored && stored > 0 ? stored : Number(import.meta.env.VITE_AUTO_LOGOUT_MS ?? 30 * 60 * 1000); // default 30 minutes
+    if (!timeoutMs || timeoutMs <= 0) return;
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const reset = () => {
+      if (timer) clearTimeout(timer);
+      if (!session) return;
+      timer = setTimeout(() => {
+        clearSession();
+        toast.error("You were logged out due to inactivity.");
+      }, timeoutMs);
+    };
+
+    const events = ["mousemove", "keydown", "mousedown", "touchstart", "click"];
+    for (const e of events) window.addEventListener(e, reset);
+    reset();
+    return () => {
+      if (timer) clearTimeout(timer);
+      for (const e of events) window.removeEventListener(e, reset);
+    };
+  }, [session]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { token, user } = await api.post<{ token: string; user: AuthUser & { fullName?: string; roles?: AppRole[] } }>(

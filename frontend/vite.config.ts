@@ -46,6 +46,13 @@ export default defineConfig({
   build: {
     outDir: path.resolve(projectRoot, 'dist/public'),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) return 'vendor';
+        },
+      },
+    },
   },
   server: {
     port,

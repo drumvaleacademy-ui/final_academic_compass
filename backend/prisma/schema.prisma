@@ -106,6 +106,7 @@ model Class {
   students           Student[]
   timetable          TimetableSlot[]
   teacherAssignments TeacherClassAssignment[]
+  @@map("classes")
 }
 
 model Stream {
@@ -117,6 +118,7 @@ model Stream {
   class     Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
   students  Student[]
   timetable TimetableSlot[]
+  @@map("streams")
 }
 
 model Subject {
@@ -131,6 +133,7 @@ model Subject {
   school             School                     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   timetable          TimetableSlot[]
   teacherAssignments TeacherSubjectAssignment[]
+  @@map("subjects")
 }
 
 model TeacherSubjectAssignment {
@@ -162,6 +165,7 @@ model Parent {
   createdBy String
   createdAt DateTime        @default(now())
   children  StudentParent[]
+  @@map("parents")
 }
 
 model StudentParent {
@@ -171,6 +175,7 @@ model StudentParent {
   createdAt DateTime @default(now())
   parent    Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
   student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  @@map("student_parents")
 }
 
 model Student {
@@ -189,6 +194,7 @@ model Student {
   class       Class           @relation(fields: [classId], references: [id])
   stream      Stream          @relation(fields: [streamId], references: [id])
   parents     StudentParent[]
+  @@map("students")
 }
 
 model Term {
@@ -201,6 +207,7 @@ model Term {
   createdAt DateTime @default(now())
   exams     Exam[]
   school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  @@map("terms")
 }
 
 model Exam {
@@ -219,6 +226,7 @@ model Exam {
   school      School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   term        Term        @relation(fields: [termId], references: [id])
   sheets      MarkSheet[]
+  @@map("exams")
 }
 
 model MarkSheet {
@@ -237,6 +245,7 @@ model MarkSheet {
   exam      Exam        @relation(fields: [examId], references: [id], onDelete: Cascade)
   stream    Stream      @relation(fields: [streamId], references: [id], onDelete: Cascade)
   subject   Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  @@map("mark_sheets")
 }
 
 model MarkEntry {
@@ -248,6 +257,7 @@ model MarkEntry {
   updatedBy String
   sheet     MarkSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
   student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  @@map("mark_entries")
 }
 
 model TimetableSlot {
@@ -268,6 +278,7 @@ model TimetableSlot {
   school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   stream    Stream?  @relation(fields: [streamId], references: [id], onDelete: Cascade)
   subject   Subject? @relation(fields: [subjectId], references: [id])
+  @@map("timetable_slots")
 }
 
 model AuditLog {
@@ -284,6 +295,7 @@ model AuditLog {
   createdAt DateTime @default(now())
   school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   actor     User     @relation("UserAuditLogs", fields: [userId], references: [id])
+  @@map("audit_logs")
 }
 
 model SmsLog {
@@ -297,6 +309,7 @@ model SmsLog {
   error      String?
   sentAt     DateTime @default(now())
   school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  @@map("sms_logs")
 }
 
 model SyncConflict {
@@ -326,6 +339,7 @@ model ActivationToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("activation_tokens")
 }
 
 model CsvImport {
@@ -340,6 +354,7 @@ model CsvImport {
   createdAt    DateTime @default(now())
   importer     User     @relation("UserCsvImports", fields: [importedBy], references: [id])
   school       School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  @@map("csv_imports")
 }
 
 enum Role {

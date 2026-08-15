@@ -17,12 +17,12 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/dist/public/$1",
+      "dest": "/$1",
       "continue": true
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/dist/public/index.html",
+      "dest": "/index.html",
       "methods": ["GET"]
     }
   ]

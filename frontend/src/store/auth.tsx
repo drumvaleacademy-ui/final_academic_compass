@@ -80,8 +80,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null);
     setRoles([]);
     try {
-      // Redirect user to sign-in page after clearing session
-      if (typeof window !== "undefined") window.location.replace("/auth");
+      // Redirect user to sign-in page after clearing session if not already there
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth")) {
+        window.location.replace("/auth");
+      }
     } catch (_e) {}
   };
 

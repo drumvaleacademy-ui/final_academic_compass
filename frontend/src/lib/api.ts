@@ -24,6 +24,7 @@ async function request<T>(
   body?: unknown
 ): Promise<T> {
   const token = localStorage.getItem("ac_token");
+  const hadToken = !!token;
   try {
     const res = await fetch(`${BASE}${path}`, {
       method,
@@ -36,7 +37,7 @@ async function request<T>(
 
     if (!res.ok) {
       // If the token is invalid or missing, clear local session, emit event and surface a clear error.
-      if (res.status === 401 || res.status === 403) {
+      if ((res.status === 401 || res.status === 403) && hadToken) {
         try {
           localStorage.removeItem("ac_token");
           localStorage.removeItem("ac_user");

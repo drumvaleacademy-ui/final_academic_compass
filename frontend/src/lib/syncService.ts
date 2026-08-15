@@ -182,7 +182,8 @@ export async function pushSchoolSnapshot(local: SchoolSnapshot): Promise<"ok" | 
     return "ok";
   } catch (err) {
     console.error("Save details sync failed:", err);
-    return "error";
+    // Rethrow so callers can show a useful message instead of a generic toast
+    throw err;
   }
 }
 

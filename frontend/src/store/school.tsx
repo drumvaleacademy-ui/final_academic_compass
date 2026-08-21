@@ -398,6 +398,25 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     if (state.online) {
       (async () => {
         try {
+          if (localStorage.getItem("ac_token")) {
+            const server = await fetchSchoolSnapshot();
+            if (server) {
+              setState(prev => ({
+                ...prev,
+                students: server.students ?? prev.students,
+                teachers: server.teachers ?? prev.teachers,
+                classes: server.classes ?? prev.classes,
+                streams: server.streams ?? prev.streams,
+                subjects: server.subjects ?? prev.subjects,
+                exams: server.exams ?? prev.exams,
+                sheets: server.sheets ?? prev.sheets,
+                curricula: server.curricula ?? prev.curricula,
+                settings: server.settings ?? prev.settings,
+                deletedIds: server.deletedIds ?? prev.deletedIds,
+                lastSyncAt: new Date().toISOString(),
+              }));
+            }
+          }
           const conflicts = await fetchPendingConflicts();
           setState(prev => ({ ...prev, conflicts }));
         } catch {}

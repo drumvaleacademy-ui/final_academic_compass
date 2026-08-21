@@ -6,26 +6,58 @@ export class SyncService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getSchoolSnapshot(schoolId: string) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db: any = this.prisma;
 
     const snapshot = await db.school.findUnique({
       where: { id: schoolId },
-      include: {
-        classes: { include: { streams: true } },
-        subjects: true,
-        users: { include: { roles: true } },
-      },
+      include: { settings: true },
     });
 
     if (!snapshot) return { data: null, updatedAt: null };
-    return { data: snapshot, updatedAt: snapshot.updatedAt };
+    const stored = snapshot.settings?.gradingScale;
+    if (stored && typeof stored === "object" && stored.snapshotVersion === 1) {
+      return { data: stored.snapshot, updatedAt: snapshot.settings.updatedAt };
+    }
+
+    return { data: null, updatedAt: snapshot.updatedAt };
   }
 
   async mergeSnapshot(schoolId: string, payload: any) {
     const current = await this.getSchoolSnapshot(schoolId);
     const merged = this.mergeSnapshots(current.data, payload);
-    return { data: merged, updatedAt: new Date().toISOString() };
+    const now = new Date();
+    const db: any = this.prisma;
+
+    await db.$transaction([
+      db.schoolSettings.upsert({
+        where: { schoolId },
+        update: {
+          gradingScale: {
+            snapshotVersion: 1,
+            snapshot: merged,
+          },
+        },
+        create: {
+          schoolId,
+          gradingScale: {
+            snapshotVersion: 1,
+            snapshot: merged,
+          },
+        },
+      }),
+      ...(merged.settings?.schoolName
+        ? [db.school.update({
+            where: { id: schoolId },
+            data: {
+              name: merged.settings.schoolName,
+              motto: merged.settings.schoolMotto ?? null,
+              email: merged.settings.schoolEmail ?? null,
+            },
+          })]
+        : []),
+    ]);
+
+    return { data: merged, updatedAt: now.toISOString() };
   }
 
   private mergeSnapshots(remote: any, local: any): any {

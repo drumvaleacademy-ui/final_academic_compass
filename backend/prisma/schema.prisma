@@ -80,6 +80,18 @@ model RefreshToken {
 model SchoolSettings {
   id            String   @id @default(uuid())
   schoolId      String   @unique
+  schoolName    String?
+  schoolTag     String?
+  schoolAddress String?
+  schoolEmail   String?
+  schoolWebsite String?
+  schoolMotto   String?
+  schoolVision  String?
+  schoolMission String?
+  principalName String?
+  principalTitle String?
+  academicYear  Int?
+  curricula     Json?
   currentTermId String?
   gradingScale  Json?
   smsProvider   String?
@@ -94,6 +106,7 @@ model SchoolSettings {
 model Class {
   id                 String                   @id @default(uuid())
   schoolId           String
+  curriculumId       String                   @default("cbc")
   name               String
   level              Int
   isActive           Boolean                  @default(true)
@@ -124,6 +137,7 @@ model Stream {
 model Subject {
   id                 String                     @id @default(uuid())
   schoolId           String
+  curriculumId       String                     @default("cbc")
   name               String
   code               String
   isCore             Boolean                    @default(false)
@@ -213,6 +227,7 @@ model Term {
 model Exam {
   id          String      @id @default(uuid())
   schoolId    String
+  curriculumId String     @default("cbc")
   classId     String
   termId      String
   name        String
@@ -231,6 +246,7 @@ model Exam {
 
 model MarkSheet {
   id        String      @id @default(uuid())
+  curriculumId String  @default("cbc")
   examId    String
   classId   String
   streamId  String

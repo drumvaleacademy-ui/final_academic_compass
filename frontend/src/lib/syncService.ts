@@ -58,6 +58,8 @@ export interface SchoolSnapshot {
   exams: any[];
   sheets: any[];
   curricula: any[];
+  entries: any[];
+  timetable: any[];
   settings: any;
   classRemarks: any[];
   principalRemarks: any[];

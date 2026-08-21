@@ -24,3 +24,10 @@ ALTER TABLE "exams"
 
 ALTER TABLE "mark_sheets"
   ADD COLUMN IF NOT EXISTS "curriculumId" TEXT NOT NULL DEFAULT 'cbc';
+
+UPDATE "school_settings"
+SET "curricula" = '[
+  {"id":"cbc","name":"CBC","shortName":"CBC","description":"Competency-Based Curriculum"},
+  {"id":"844","name":"844","shortName":"844","description":"8-4-4 System"}
+]'::jsonb
+WHERE "curricula" IS NULL;

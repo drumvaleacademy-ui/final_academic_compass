@@ -51,7 +51,6 @@ export class SyncService {
             data: {
               name: merged.settings.schoolName,
               motto: merged.settings.schoolMotto ?? null,
-              email: merged.settings.schoolEmail ?? null,
             },
           })]
         : []),

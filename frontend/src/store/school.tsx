@@ -66,6 +66,8 @@ export interface ExamItem {
   year: number;
   outOf: number;
   status: "draft" | "open" | "closed";
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface SheetItem {

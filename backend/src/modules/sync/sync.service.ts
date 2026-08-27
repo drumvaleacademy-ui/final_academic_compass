@@ -33,7 +33,7 @@ export class SyncService {
         streams: classes.flatMap((item: any) => item.streams.map((stream: any) => ({ id: stream.id, classId: stream.classId, name: stream.name }))),
         subjects: subjects.map((item: any) => ({ id: item.id, curriculumId: item.curriculumId, name: item.name, code: item.code })),
         students: students.map((item: any) => ({ id: item.id, curriculumId: item.class?.curriculumId ?? "cbc", admissionNo: item.admissionNo, name: item.fullName, gender: item.gender, classId: item.classId, streamId: item.streamId })),
-        exams: exams.map((item: any) => ({ id: item.id, curriculumId: item.curriculumId, name: item.name, term: Number(item.term?.name?.replace(/\D/g, "")) || 1, year: item.year, outOf: item.outOf, status: item.status })),
+        exams: exams.map((item: any) => ({ id: item.id, curriculumId: item.curriculumId, name: item.name, term: Number(item.term?.name?.replace(/\D/g, "")) || 1, year: item.year, outOf: item.outOf, status: item.status, startDate: item.term?.startDate?.toISOString?.(), endDate: item.term?.endDate?.toISOString?.() })),
         sheets: sheets.map((item: any) => ({ id: item.id, curriculumId: item.curriculumId, classId: item.classId, streamId: item.streamId, subjectId: item.subjectId, examId: item.examId, status: item.status, locked: item.locked, teacherComment: item.comment, teacherId: item.teacherId })),
         entries: entries.map((item: any) => ({ id: item.id, sheetId: item.sheetId, studentId: item.studentId, score: item.score, updatedAt: item.updatedAt, updatedBy: item.updatedBy, pending: false })),
         timetable: timetable.map((item: any) => ({ id: item.id, curriculumId: item.class?.curriculumId ?? "cbc", classId: item.classId, streamId: item.streamId, dayOfWeek: item.dayOfWeek, period: item.period, startTime: item.startTime, endTime: item.endTime, subjectId: item.subjectId, teacherId: item.teacherId, room: item.room, pending: false })),
@@ -123,8 +123,8 @@ export class SyncService {
         const termId = `term_${schoolId}_${item.year}_${termNumber}`;
         await tx.term.upsert({
           where: { id: termId },
-          update: { name: `Term ${termNumber}`, startDate: new Date(`${item.year}-01-01`), endDate: new Date(`${item.year}-12-31`) },
-          create: { id: termId, schoolId, name: `Term ${termNumber}`, startDate: new Date(`${item.year}-01-01`), endDate: new Date(`${item.year}-12-31`) },
+          update: { name: `Term ${termNumber}`, ...(item.startDate ? { startDate: new Date(item.startDate) } : {}), ...(item.endDate ? { endDate: new Date(item.endDate) } : {}) },
+          create: { id: termId, schoolId, name: `Term ${termNumber}`, startDate: item.startDate ? new Date(item.startDate) : new Date(`${item.year}-01-01`), endDate: item.endDate ? new Date(item.endDate) : new Date(`${item.year}-12-31`) },
         });
         await tx.exam.upsert({
           where: { id: item.id },

@@ -40,6 +40,9 @@ interface ReportCardProps {
   }>;
   teacherName?: string;
   principalName?: string;
+  curriculumName?: string;
+  termEndDate?: string;
+  nextTermStartDate?: string;
 }
 
 const GRADE_BANDS = [
@@ -54,6 +57,12 @@ const GRADE_BANDS = [
 function gradeFor(percentage: number): string {
   const band = GRADE_BANDS.find((b) => percentage >= b.min);
   return band ? band.grade : "F";
+}
+
+function formatReportDate(value?: string): string {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
 }
 
 const SAMPLE_SUBJECTS: NonNullable<ReportCardProps["subjects"]> = [
@@ -113,6 +122,8 @@ export default function Reports() {
   }, [selectedStudent, selectedExam, state]);
   const reportClass = selectedStudent ? state.classes.find((item) => item.id === selectedStudent.classId) : undefined;
   const reportStream = selectedStudent ? state.streams.find((item) => item.id === selectedStudent.streamId) : undefined;
+  const reportCurriculum = selectedStudent ? state.curricula.find((item) => item.id === reportClass?.curriculumId) : undefined;
+  const nextTermExam = selectedExam ? exams.find((exam) => exam.year === selectedExam.year && exam.term === selectedExam.term + 1) ?? exams.find((exam) => exam.year === selectedExam.year + 1 && exam.term === 1) : undefined;
 
   const exportReports = async () => {
     if (!selectedStudent || !selectedExam || !reportRef.current) { toast.error("Select a learner with an exam before exporting."); return; }
@@ -209,7 +220,7 @@ export default function Reports() {
         }
       />
 
-      {selectedStudent && selectedExam && <div ref={reportRef} className="report-preview bg-background p-2"><ReportCardPreview schoolName={state.settings.schoolName} studentId={selectedStudent.id} studentName={selectedStudent.name} admissionNumber={selectedStudent.admissionNo} className={reportClass?.name} stream={reportStream?.name} term={`Term ${selectedExam.term}`} year={selectedExam.year} subjects={reportCardSubjects} teacherName="" principalName={state.settings.principalName} /></div>}
+      {selectedStudent && selectedExam && <div ref={reportRef} className="report-preview bg-background p-2"><ReportCardPreview schoolName={state.settings.schoolName} studentId={selectedStudent.id} studentName={selectedStudent.name} admissionNumber={selectedStudent.admissionNo} className={reportClass?.name} stream={reportStream?.name} term={`Term ${selectedExam.term}`} year={selectedExam.year} subjects={reportCardSubjects} teacherName="" principalName={state.settings.principalName} curriculumName={reportCurriculum?.name || reportCurriculum?.shortName || selectedExam.curriculumId} termEndDate={selectedExam.endDate} nextTermStartDate={nextTermExam?.startDate} /></div>}
 
       <Card className="p-4 space-y-4">
         <div className="flex flex-wrap gap-2 items-center">
@@ -281,7 +292,7 @@ function ReportCardPreview(props: ReportCardProps) {
                   {props.year || new Date().getFullYear()}
                 </Badge>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {props.term} · CBC Curriculum
+                  {props.term} · {props.curriculumName || "Curriculum"}
                 </div>
               </div>
             </div>
@@ -401,11 +412,7 @@ function ReportCardPreview(props: ReportCardProps) {
               </div>
               <div className="pt-2">
                 <Label className="text-xs font-medium text-muted-foreground">Class Teacher's Comment</Label>
-                <p className="text-sm mt-1 italic">
-                  "Amina has shown consistent effort and good behavior throughout the term. She participates 
-                  actively in class discussions and has shown marked improvement in Mathematics. She is 
-                  encouraged to focus on Social Studies and Home Science for the next term."
-                </p>
+                <p className="text-sm mt-1 italic text-muted-foreground">No class teacher remarks recorded for this learner.</p>
               </div>
             </div>
 
@@ -422,7 +429,7 @@ function ReportCardPreview(props: ReportCardProps) {
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block">Date:</span>
-                    <p className="font-medium mt-1 border-b-2 border-dashed border-muted pb-1">{new Date().toLocaleDateString()}</p>
+                    <p className="font-medium mt-1 border-b-2 border-dashed border-muted pb-1">{formatReportDate(props.termEndDate) || "Not set"}</p>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block">Principal:</span>
@@ -440,7 +447,7 @@ function ReportCardPreview(props: ReportCardProps) {
                 </div>
                 <div>
                   <span className="text-xs text-muted-foreground block">Next Term Begins:</span>
-                  <p className="font-medium mt-1 border-b-2 border-dashed border-muted pb-1">15th September 2024</p>
+                  <p className="font-medium mt-1 border-b-2 border-dashed border-muted pb-1">{formatReportDate(props.nextTermStartDate) || "Not set"}</p>
                 </div>
               </div>
             </div>
@@ -469,7 +476,7 @@ function ReportCardPreview(props: ReportCardProps) {
       <Card className="p-4 mt-6 bg-muted/30">
         <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
           <GraduationCap className="h-4 w-4" />
-          Grade Scale (CBC 1-3-2-3 System)
+          Grade Scale ({props.curriculumName || "configured curriculum"})
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-center text-xs">
           <div className="p-2 border rounded">

@@ -149,7 +149,7 @@ export class SyncService {
       if (settings.schoolName) {
         await tx.school.update({ where: { id: schoolId }, data: { name: settings.schoolName, motto: settings.schoolMotto ?? null } });
       }
-    });
+    }, { maxWait: 10000, timeout: 25000 });
 
     return { data: merged, updatedAt: now.toISOString() };
   }

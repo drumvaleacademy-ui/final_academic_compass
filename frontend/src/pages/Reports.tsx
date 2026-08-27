@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/table";
 import {
   SchoolLogoIcon } from "@/components/SchoolLogo";
-import { Download, FileText, Printer, Calendar, Users, GraduationCap } from "lucide-react";
+import { Download, FileText, Printer, Users, GraduationCap, Loader2, MessageSquare } from "lucide-react";
 import { useSchool } from "@/store/school";
 import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface ReportCardProps {
   schoolName?: string;
@@ -88,6 +89,10 @@ export default function Reports() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"learner" | "teacher" | "class" | "subject">("learner");
   const [examId, setExamId] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const selectedStudent = state.students.find((student) => student.id === studentId);
   const classes = state.classes;
@@ -109,7 +114,6 @@ export default function Reports() {
     return rows.filter((row) => (!classFilter || state.classes.find((item) => item.name === row.className)?.id === classFilter) && (!examId || state.exams.find((item) => item.name === row.exam)?.id === examId) && (!q || [row.learner, row.admission, row.teacher, row.className, row.subject, row.exam].some((value) => value.toLowerCase().includes(q)))).sort((a, b) => String(a[sortKey] ?? "").localeCompare(String(b[sortKey] ?? "")));
   }, [state, search, sortBy, classFilter, examId]);
 
-  const printReports = () => window.print();
   const selectedExam = exams.find((exam) => exam.id === examId) ?? exams[exams.length - 1];
   const reportCardSubjects = useMemo(() => {
     if (!selectedStudent || !selectedExam) return [];
@@ -125,8 +129,14 @@ export default function Reports() {
   const reportCurriculum = selectedStudent ? state.curricula.find((item) => item.id === reportClass?.curriculumId) : undefined;
   const nextTermExam = selectedExam ? exams.find((exam) => exam.year === selectedExam.year && exam.term === selectedExam.term + 1) ?? exams.find((exam) => exam.year === selectedExam.year + 1 && exam.term === 1) : undefined;
 
+  const openReport = (id: string) => {
+    setStudentId(id);
+    setPreviewOpen(true);
+  };
+
   const exportReports = async () => {
     if (!selectedStudent || !selectedExam || !reportRef.current) { toast.error("Select a learner with an exam before exporting."); return; }
+    setIsExporting(true);
     const source = reportRef.current;
     const exportNode = source.cloneNode(true) as HTMLDivElement;
     exportNode.style.width = "794px";
@@ -170,11 +180,13 @@ export default function Reports() {
       toast.error(error instanceof Error ? error.message : "Could not export this report as PDF.");
     } finally {
       exportNode.remove();
+      setIsExporting(false);
     }
   };
 
   const sendReportCard = async () => {
     if (!selectedStudent) { toast.error("Select a student first"); return; }
+    setIsSending(true);
     const message = `${selectedStudent.name}'s report card is ready. Results are available in Academic Compass.`;
     try {
       await api.post("/v2/sms/report-card", {
@@ -185,7 +197,17 @@ export default function Reports() {
       toast.success("Report card SMS sent to the registered parent contact");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to send report card SMS");
+    } finally {
+      setIsSending(false);
     }
+  };
+
+  const printReport = () => {
+    setIsPrinting(true);
+    window.setTimeout(() => {
+      window.print();
+      setIsPrinting(false);
+    }, 50);
   };
 
   return (
@@ -195,7 +217,7 @@ export default function Reports() {
         description="Generate, view, and print student report cards with official school letterhead."
         actions={
           <div className="flex gap-2">
-            <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Learner</label><Select value={studentId} onValueChange={setStudentId}>
+            <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Learner</label><Select value={studentId} onValueChange={openReport}>
               <SelectTrigger className="w-52"><SelectValue placeholder="Select learner" /></SelectTrigger>
               <SelectContent>{state.students.map((student) => <SelectItem key={student.id} value={student.id}>{student.name}</SelectItem>)}</SelectContent>
             </Select></div>
@@ -208,14 +230,6 @@ export default function Reports() {
               <SelectContent><SelectItem value="all">All exams</SelectItem>{exams.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent>
             </Select></div>
             <Button variant="outline" size="sm" onClick={sendReportCard} disabled={!selectedStudent}>Send SMS</Button>
-            <Button variant="outline" size="sm" onClick={printReports}>
-              <Printer className="h-4 w-4 mr-1" />
-              Print Preview
-            </Button>
-            <Button variant="outline" size="sm" onClick={exportReports} disabled={!selectedStudent || !selectedExam}>
-              <Download className="h-4 w-4 mr-1" />
-              Export PDF
-            </Button>
           </div>
         }
       />
@@ -232,9 +246,27 @@ export default function Reports() {
           <Badge variant="outline">{reportRows.length} result{reportRows.length === 1 ? "" : "s"}</Badge>
         </div>
         <div className="list-scroll-container overflow-x-auto border rounded-md">
-          <table className="data-table min-w-[980px]"><thead><tr><th>Learner</th><th>Teacher</th><th>Class</th><th>Subject</th><th>Exam</th><th>Score</th><th>Status</th></tr></thead><tbody>{reportRows.length ? reportRows.map((row) => <tr key={row.id} className="cursor-pointer hover:bg-muted/40" onClick={() => row.studentId && setStudentId(row.studentId)}><td><button type="button" className="text-left"><div className="font-medium text-primary">{row.learner}</div><div className="text-xs text-muted-foreground">{row.admission}</div></button></td><td>{row.teacher}</td><td>{row.className} {row.stream && `· ${row.stream}`}</td><td>{row.subject}</td><td>{row.exam}</td><td className="font-semibold">{row.score ?? "Not entered"}</td><td>{row.pending ? <Badge variant="outline">Pending</Badge> : <Badge>Saved</Badge>}</td></tr>) : <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">No report results exist yet. Enter marks to generate reports for each learner.</td></tr>}</tbody></table>
+          <table className="data-table min-w-[980px]"><thead><tr><th>Learner</th><th>Teacher</th><th>Class</th><th>Subject</th><th>Exam</th><th>Score</th><th>Status</th></tr></thead><tbody>{reportRows.length ? reportRows.map((row) => <tr key={row.id} className="cursor-pointer hover:bg-muted/40" onClick={() => row.studentId && openReport(row.studentId)}><td><button type="button" className="text-left"><div className="font-medium text-primary">{row.learner}</div><div className="text-xs text-muted-foreground">{row.admission}</div></button></td><td>{row.teacher}</td><td>{row.className} {row.stream && `· ${row.stream}`}</td><td>{row.subject}</td><td>{row.exam}</td><td className="font-semibold">{row.score ?? "Not entered"}</td><td>{row.pending ? <Badge variant="outline">Pending</Badge> : <Badge>Saved</Badge>}</td></tr>) : <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">No report results exist yet. Enter marks to generate reports for each learner.</td></tr>}</tbody></table>
         </div>
       </Card>
+
+      <Dialog open={previewOpen && !!selectedStudent && !!selectedExam} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-6xl p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Report Card Preview</DialogTitle>
+            <DialogDescription>{selectedStudent?.name} · {selectedStudent?.admissionNo}</DialogDescription>
+          </DialogHeader>
+          {selectedStudent && selectedExam && <div ref={reportRef} className="report-preview print-page max-h-[65vh] overflow-y-auto bg-background p-2"><ReportCardPreview schoolName={state.settings.schoolName} studentId={selectedStudent.id} studentName={selectedStudent.name} admissionNumber={selectedStudent.admissionNo} className={reportClass?.name} stream={reportStream?.name} term={`Term ${selectedExam.term}`} year={selectedExam.year} subjects={reportCardSubjects} teacherName="" principalName={state.settings.principalName} curriculumName={reportCurriculum?.name || reportCurriculum?.shortName || selectedExam.curriculumId} termEndDate={selectedExam.endDate} nextTermStartDate={nextTermExam?.startDate} /></div>}
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between sm:space-x-0">
+            <Button variant="outline" onClick={() => setPreviewOpen(false)}>Close</Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="outline" onClick={printReport} disabled={isPrinting}>{isPrinting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Printer className="mr-1 h-4 w-4" />}Print</Button>
+              <Button variant="outline" onClick={exportReports} disabled={isExporting}>{isExporting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />}Export PDF</Button>
+              <Button onClick={sendReportCard} disabled={isSending}>{isSending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <MessageSquare className="mr-1 h-4 w-4" />}Send SMS</Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

@@ -192,7 +192,26 @@ export async function pushSchoolSnapshot(local: SchoolSnapshot): Promise<"ok" | 
 export async function fetchSchoolSnapshot(): Promise<SchoolSnapshot | null> {
   try {
     const result = await api.get<{ data: SchoolSnapshot | null }>("/v2/sync");
-    return result.data;
+    const snapshot = result.data;
+    if (!snapshot) return null;
+
+    const classes = (snapshot.classes ?? []).map((item: any) => ({
+      ...item,
+      curriculumId: String(item.curriculumId ?? "cbc").trim().toLowerCase(),
+    }));
+    const classCurricula = new Map(classes.map((item: any) => [item.id, item.curriculumId]));
+    return {
+      ...snapshot,
+      classes,
+      streams: (snapshot.streams ?? []).map((item: any) => ({ ...item, classId: String(item.classId ?? "") })),
+      students: (snapshot.students ?? []).map((item: any) => ({
+        ...item,
+        curriculumId: String(item.curriculumId ?? classCurricula.get(item.classId) ?? "cbc").trim().toLowerCase(),
+      })),
+      subjects: (snapshot.subjects ?? []).map((item: any) => ({ ...item, curriculumId: String(item.curriculumId ?? "cbc").trim().toLowerCase() })),
+      exams: (snapshot.exams ?? []).map((item: any) => ({ ...item, curriculumId: String(item.curriculumId ?? "cbc").trim().toLowerCase() })),
+      sheets: (snapshot.sheets ?? []).map((item: any) => ({ ...item, curriculumId: String(item.curriculumId ?? "cbc").trim().toLowerCase() })),
+    };
   } catch (err) {
     console.error("Load school snapshot failed:", err);
     return null;

@@ -113,9 +113,14 @@ export function statsForStudentExam(
   entries: MarkEntry[],
   studentId: string,
   subjects?: Array<{ id: string; name: string }>,
-  sheets?: Array<{ id: string; subjectId: string }>
+  sheets?: Array<{ id: string; subjectId: string; examId?: string }>,
+  examId?: string
 ): StudentStats {
-  const studentEntries = entries.filter((e) => e.studentId === studentId && e.score != null);
+  const studentEntries = entries.filter((e) => {
+    if (e.studentId !== studentId || e.score == null) return false;
+    if (!examId) return true;
+    return sheets?.some((sheet) => sheet.id === e.sheetId && sheet.examId === examId) ?? false;
+  });
   const total = studentEntries.reduce((sum, e) => sum + (e.score ?? 0), 0);
   const count = studentEntries.length;
   const average = count > 0 ? total / count : 0;

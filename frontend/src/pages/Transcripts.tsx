@@ -10,7 +10,7 @@ import {
   LineChart, Line, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
 } from "recharts";
 import { belongsToCurriculum, statsForStudentExam, identifyWeakAreas } from "@/lib/schoolData";
-import { Printer, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { Printer, TrendingDown, TrendingUp, Minus, UserRound, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Transcripts() {
@@ -30,13 +30,13 @@ export default function Transcripts() {
     if (!exams.some(item => item.id === examId)) setExamId(exams[exams.length - 1]?.id || "");
   }, [exams, examId]);
 
-  const stats = student && examId ? statsForStudentExam(state.entries, student.id, state.subjects, state.sheets) : null;
+  const stats = student && examId ? statsForStudentExam(state.entries, student.id, state.subjects, state.sheets, examId) : null;
   const weak  = student ? identifyWeakAreas(state.entries, state.subjects, state.sheets) : [];
 
   const trend = useMemo(() => {
     if (!student) return [];
     return exams.map(ex => {
-      const s = statsForStudentExam(state.entries, student.id, state.subjects, state.sheets);
+      const s = statsForStudentExam(state.entries, student.id, state.subjects, state.sheets, ex.id);
       return { name: `${ex.name} T${ex.term}`, mean: s.mean };
     });
   }, [student, exams, state]); // eslint-disable-line
@@ -60,6 +60,19 @@ export default function Transcripts() {
           </Button>
         )}
       </Card>
+
+      {student && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-primary/20 bg-primary-soft px-4 py-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <UserRound className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="truncate font-semibold">{student.name}</div>
+            <div className="text-xs text-muted-foreground">Admission {student.admissionNo} · {state.classes.find(c => c.id === student.classId)?.name ?? "Class not set"} · {state.streams.find(s => s.id === student.streamId)?.name ?? "Stream not set"}</div>
+          </div>
+          {examId && <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground"><BookOpen className="h-4 w-4" />{exams.find(ex => ex.id === examId)?.name ?? "Selected exam"}</div>}
+        </div>
+      )}
 
       {student && stats && (
         <>
@@ -157,7 +170,7 @@ export default function Transcripts() {
               <div className="mt-4">
                 <label className="text-xs text-muted-foreground">Support plan (editable)</label>
                 <Textarea
-                  placeholder="Recommended remedial actions, mentorship, guardian outreach…"
+                  placeholder="Add learner support notes, remedial actions, or guardian follow-up..."
                   defaultValue={student.vap}
                   onBlur={(e) => update(s => { const x = s.students.find(x => x.id === student.id); if (x) x.vap = e.target.value; })}/>
               </div>

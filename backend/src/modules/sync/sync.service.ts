@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../../core/prisma.service";
+import { deduplicateStudents, normalizeAdmissionNo } from "../students/student-identity";
 
 const DEFAULT_CURRICULA = [
   { id: "cbc", name: "CBC", shortName: "CBC", description: "Competency-Based Curriculum" },
@@ -60,6 +61,7 @@ export class SyncService {
   async mergeSnapshot(schoolId: string, payload: any) {
     const current = await this.getSchoolSnapshot(schoolId);
     const merged = this.mergeSnapshots(current.data, payload);
+    merged.students = deduplicateStudents(merged.students ?? []);
     const now = new Date();
     const db: any = this.prisma;
     const existingClasses = new Map<string, any>((current.data?.classes ?? []).map((item: any) => [item.id, item]));
@@ -192,7 +194,14 @@ export class SyncService {
     if (!rows.length) return { ok: true, count: 0 };
     const validClasses = new Set((await db.class.findMany({ where: { schoolId }, select: { id: true } })).map((item: any) => item.id));
     const validStreams = new Set((await db.stream.findMany({ where: { class: { schoolId } }, select: { id: true, classId: true } })).map((item: any) => `${item.id}:${item.classId}`));
-    const safeRows = rows.filter((item) => validClasses.has(item.classId) && validStreams.has(`${item.streamId}:${item.classId}`));
+    const existing = await db.student.findMany({ where: { schoolId }, select: { admissionNo: true } });
+    const existingAdmissionNos = new Set(existing.map((item: any) => normalizeAdmissionNo(item.admissionNo)).filter(Boolean));
+    const safeRows = deduplicateStudents(rows).filter((item) => {
+      const admissionNo = normalizeAdmissionNo(item.admissionNo);
+      if (!validClasses.has(item.classId) || !validStreams.has(`${item.streamId}:${item.classId}`) || !admissionNo || existingAdmissionNos.has(admissionNo)) return false;
+      existingAdmissionNos.add(admissionNo);
+      return true;
+    });
     await db.student.createMany({
       data: safeRows.map((item) => ({
         id: String(item.id), schoolId, admissionNo: String(item.admissionNo ?? ""), fullName: String(item.name ?? "New Student"),

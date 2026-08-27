@@ -204,8 +204,20 @@ export default function Students() {
 
   const confirmImport = () => {
     if (!preview) return;
+    const admissionNos = new Set(state.students.map((student) => student.admissionNo.trim().replace(/\s+/g, " ").toLowerCase()).filter(Boolean));
+    const imported = preview.filter((row) => {
+      const admissionNo = row.admissionNo.trim().replace(/\s+/g, " ").toLowerCase();
+      if (!admissionNo || admissionNos.has(admissionNo)) return false;
+      admissionNos.add(admissionNo);
+      return true;
+    });
+    if (!imported.length) {
+      toast.error("No new admission numbers were found in this file.");
+      setPreview(null);
+      return;
+    }
     update((s) => {
-      preview.forEach((row) => {
+      imported.forEach((row, index) => {
         let classId = classFilter !== "all" ? classFilter : (classes[0]?.id || "");
         let streamId = "";
         if (classId) {
@@ -219,7 +231,7 @@ export default function Students() {
         s.students.push({
           id: `stu_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           curriculumId: activeCurriculum,
-          admissionNo: row.admissionNo || `IMP/${Date.now()}/${s.settings.academicYear}`,
+          admissionNo: row.admissionNo || `IMP/${s.settings.academicYear}/${Date.now()}-${index}`,
           name: row.name || "New Student",
           gender: "M",
           classId,
@@ -228,7 +240,7 @@ export default function Students() {
         });
       });
     });
-    toast.success(`Imported ${preview.length} students`);
+    toast.success(`Imported ${imported.length} students`);
     setPreview(null);
   };
 

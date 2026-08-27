@@ -103,12 +103,11 @@ export default function Classes() {
     const target = extractTargetRef.current;
     if (!extractRows || !target || extracting) return;
     setExtracting(true);
-    const existingKeys = new Set(state.students.map(student => `${student.classId}:${student.streamId}:${student.admissionNo.trim().toLowerCase()}`));
+    const existingKeys = new Set(state.students.map(student => student.admissionNo.trim().replace(/\s+/g, " ").toLowerCase()).filter(Boolean));
     const imported = extractRows.filter(row => {
-      const identity = row.admissionNo.trim().toLowerCase() || `name:${row.name.trim().toLowerCase()}`;
-      const key = `${target.classId}:${target.streamId}:${identity}`;
-      if (existingKeys.has(key)) return false;
-      existingKeys.add(key);
+      const identity = row.admissionNo.trim().replace(/\s+/g, " ").toLowerCase();
+      if (!identity || existingKeys.has(identity)) return false;
+      existingKeys.add(identity);
       return true;
     }).map((row, index) => ({
       id: `stu_${Date.now()}_${index}_${Math.random().toString(36).slice(2, 7)}`,

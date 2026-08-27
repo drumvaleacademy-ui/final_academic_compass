@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../core/prisma.service";
+import { normalizeAdmissionNo } from "../students/student-identity";
 
 @Injectable()
 export class ImportsService {
@@ -23,7 +24,7 @@ export class ImportsService {
       where: { schoolId },
     });
 
-    const studentsByAdm = new Map(students.map((s: any) => [s.admissionNo, s]));
+    const studentsByAdm = new Map(students.map((s: any) => [normalizeAdmissionNo(s.admissionNo), s]));
     const studentsById = new Map(students.map((s: any) => [s.id, s]));
 
     const entriesToUpsert: any[] = [];
@@ -36,7 +37,7 @@ export class ImportsService {
       const rawScore = r.score != null && r.score !== "" ? Number(r.score) : null;
       if (!admissionNo) continue;
 
-      const student: any = studentsByAdm.get(admissionNo) || studentsById.get(admissionNo);
+      const student: any = studentsByAdm.get(normalizeAdmissionNo(admissionNo)) || studentsById.get(admissionNo);
       if (!student) {
         errors.push({ admissionNo, error: "Student not found" });
         continue;

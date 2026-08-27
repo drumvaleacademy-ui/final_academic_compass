@@ -425,6 +425,8 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
                 deletedIds: server.deletedIds ?? prev.deletedIds,
                 lastSyncAt: new Date().toISOString(),
               }));
+            } else {
+              toast.error("Could not load saved school data from the server.");
             }
           }
           const conflicts = await fetchPendingConflicts();

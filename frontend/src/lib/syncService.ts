@@ -193,7 +193,8 @@ export async function fetchSchoolSnapshot(): Promise<SchoolSnapshot | null> {
   try {
     const result = await api.get<{ data: SchoolSnapshot | null }>("/v2/sync");
     return result.data;
-  } catch {
+  } catch (err) {
+    console.error("Load school snapshot failed:", err);
     return null;
   }
 }

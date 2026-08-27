@@ -52,7 +52,7 @@ export default function Classes() {
           s.streams = s.streams.filter(item => item.id !== target.id);
         }
         s.deletedIds = (s.deletedIds ?? []).filter(item => item !== target.id);
-      });
+      }, { markDirty: false });
       toast.success(`${target.entity === "class" ? "Class" : "Stream"} deleted permanently.`);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Could not delete this item.");
@@ -118,7 +118,7 @@ export default function Classes() {
     };
     try {
       await pushSchoolSnapshot(snapshot);
-      update(s => { s.students.push(...imported); });
+      update(s => { s.students.push(...imported); }, { markDirty: false });
       toast.success(`${imported.length} student${imported.length === 1 ? "" : "s"} extracted and saved to ${extractTarget.label}.`);
       setExtractRows(null);
       setExtractTarget(null);

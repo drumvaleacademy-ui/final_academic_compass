@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from "react";
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from "react";
 import { pushSchoolSnapshot, fetchSchoolSnapshot, fetchPendingConflicts, resolveRemoteConflict } from "@/lib/syncService";
 import { useAuth } from "@/store/auth";
 import { toast } from "sonner";
@@ -172,7 +172,7 @@ interface SchoolContextValue {
   state: SchoolState;
   activeCurriculum: string;
   setActiveCurriculum: (id: string) => void;
-  update: (fn: (s: SchoolState) => void) => void;
+  update: (fn: (s: SchoolState) => void, options?: { markDirty?: boolean }) => void;
   setMarkScore: (studentId: string, subjectId: string, raw: string) => void;
   syncNow: () => void;
   upsertTimetableSlot: (slot: TimetableItem) => void;
@@ -245,13 +245,15 @@ const Ctx = createContext<SchoolContextValue>({
 export function SchoolProvider({ children }: { children: ReactNode }) {
   const { session, loading: authLoading } = useAuth();
   const [state, setState] = useState<SchoolState>(() => cachedState(session?.user.id));
+  const localChangesRef = useRef(false);
 
   const cacheSnapshot = (userId: string | undefined, snapshot: unknown) => {
     if (!userId || typeof window === "undefined") return;
     try { localStorage.setItem(`ac_school_snapshot_${userId}`, JSON.stringify(snapshot)); } catch (_e) {}
   };
 
-  const update = useCallback((fn: (s: SchoolState) => void) => {
+  const update = useCallback((fn: (s: SchoolState) => void, options?: { markDirty?: boolean }) => {
+    if (options?.markDirty !== false) localChangesRef.current = true;
     setState((prev) => {
       const next = { ...prev };
       fn(next);
@@ -290,6 +292,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
         };
         const res = await pushSchoolSnapshot(snap);
         if (res === "ok") {
+          localChangesRef.current = false;
           setState(prev => ({ ...prev, lastSyncAt: new Date().toISOString(), syncQueue: [] }));
           toast.success("Sync successful");
         } else {
@@ -363,6 +366,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
         };
         const res = await pushSchoolSnapshot(snap);
         if (res === "ok") {
+          localChangesRef.current = false;
           // After a successful push, fetch authoritative snapshot from server
           try {
             const server = await fetchSchoolSnapshot();
@@ -418,42 +422,52 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     const onOffline = () => setState(prev => ({ ...prev, online: false }));
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
-    // initial fetch when starting online
+    const refreshFromServer = async () => {
+      if (localChangesRef.current || !navigator.onLine || !localStorage.getItem("ac_token")) return;
+      try {
+        const server = await fetchSchoolSnapshot();
+        if (server && !localChangesRef.current) {
+          cacheSnapshot(session?.user.id, server);
+          setState(prev => ({
+            ...prev,
+            students: server.students ?? prev.students,
+            teachers: server.teachers ?? prev.teachers,
+            classes: server.classes ?? prev.classes,
+            streams: server.streams ?? prev.streams,
+            subjects: server.subjects ?? prev.subjects,
+            exams: server.exams ?? prev.exams,
+            sheets: server.sheets ?? prev.sheets,
+            entries: server.entries ?? prev.entries,
+            timetable: server.timetable ?? prev.timetable,
+            curricula: server.curricula ?? prev.curricula,
+            settings: server.settings ?? prev.settings,
+            deletedIds: server.deletedIds ?? prev.deletedIds,
+            lastSyncAt: new Date().toISOString(),
+          }));
+        }
+      } catch {}
+    };
+
     if (state.online) {
       (async () => {
         try {
-          if (localStorage.getItem("ac_token")) {
-            const server = await fetchSchoolSnapshot();
-            if (server) {
-              cacheSnapshot(session?.user.id, server);
-              setState(prev => ({
-                ...prev,
-                students: server.students ?? prev.students,
-                teachers: server.teachers ?? prev.teachers,
-                classes: server.classes ?? prev.classes,
-                streams: server.streams ?? prev.streams,
-                subjects: server.subjects ?? prev.subjects,
-                exams: server.exams ?? prev.exams,
-                sheets: server.sheets ?? prev.sheets,
-                entries: server.entries ?? prev.entries,
-                timetable: server.timetable ?? prev.timetable,
-                curricula: server.curricula ?? prev.curricula,
-                settings: server.settings ?? prev.settings,
-                deletedIds: server.deletedIds ?? prev.deletedIds,
-                lastSyncAt: new Date().toISOString(),
-              }));
-            } else {
-              toast.error("Could not load saved school data from the server.");
-            }
-          }
+          await refreshFromServer();
           const conflicts = await fetchPendingConflicts();
           setState(prev => ({ ...prev, conflicts }));
         } catch {}
       })();
     }
+    const interval = window.setInterval(refreshFromServer, 5000);
+    const onFocus = () => { void refreshFromServer(); };
+    const onVisibilityChange = () => { if (document.visibilityState === "visible") void refreshFromServer(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [authLoading, session?.token]);
 

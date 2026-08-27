@@ -11,7 +11,7 @@ import {
   Users, BookOpen, ClipboardList,
   AlertTriangle, TrendingUp, GitMerge, CheckCircle2,
 } from "lucide-react";
-import { statsForStudentExam } from "@/lib/schoolData";
+import { belongsToCurriculum, statsForStudentExam } from "@/lib/schoolData";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
@@ -20,14 +20,14 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const curriculum = state.curricula.find(c => c.id === activeCurriculum)!;
 
-  const students = state.students.filter(s => s.curriculumId === activeCurriculum);
-  const subjects  = state.subjects.filter(s => s.curriculumId === activeCurriculum);
-  const exams     = state.exams.filter(e => e.curriculumId === activeCurriculum);
-  const sheets    = state.sheets.filter(s => s.curriculumId === activeCurriculum);
+  const students = state.students.filter(s => belongsToCurriculum(s.curriculumId, activeCurriculum));
+  const subjects  = state.subjects.filter(s => belongsToCurriculum(s.curriculumId, activeCurriculum));
+  const exams     = state.exams.filter(e => belongsToCurriculum(e.curriculumId, activeCurriculum));
+  const sheets    = state.sheets.filter(s => belongsToCurriculum(s.curriculumId, activeCurriculum));
 
   const pendingEntries = state.entries.filter(e => {
     const sh = state.sheets.find(x => x.id === e.sheetId);
-    return sh?.curriculumId === activeCurriculum && e.pending === true;
+    return belongsToCurriculum(sh?.curriculumId, activeCurriculum) && e.pending === true;
   });
   const pendingMarks = pendingEntries.length;
 

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, ReactNode, useEffect,
 import { pushSchoolSnapshot, fetchSchoolSnapshot, fetchPendingConflicts, resolveRemoteConflict } from "@/lib/syncService";
 import { useAuth } from "@/store/auth";
 import { toast } from "sonner";
+import { normalizeCurriculumId } from "@/lib/schoolData";
 
 export interface GradeBand {
   grade: string;
@@ -262,7 +263,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setActiveCurriculum = useCallback((id: string) => {
-    setState((prev) => ({ ...prev, activeCurriculum: id }));
+    setState((prev) => ({ ...prev, activeCurriculum: normalizeCurriculumId(id) }));
   }, []);
 
   const value: SchoolContextValue = {

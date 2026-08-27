@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSchool } from "@/store/school";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -9,18 +9,26 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   LineChart, Line, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
 } from "recharts";
-import { statsForStudentExam, identifyWeakAreas } from "@/lib/schoolData";
+import { belongsToCurriculum, statsForStudentExam, identifyWeakAreas } from "@/lib/schoolData";
 import { Printer, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Transcripts() {
   const { state, activeCurriculum, update } = useSchool();
-  const students = state.students.filter(s => s.curriculumId === activeCurriculum);
+  const students = state.students.filter(s => belongsToCurriculum(s.curriculumId, activeCurriculum));
   const [studentId, setStudentId] = useState<string>(students[0]?.id || "");
   const student = state.students.find(s => s.id === studentId);
-  const exams = state.exams.filter(e => e.curriculumId === activeCurriculum && e.status !== "draft")
+  const exams = state.exams.filter(e => belongsToCurriculum(e.curriculumId, activeCurriculum) && e.status !== "draft")
     .sort((a, b) => a.year - b.year || a.term - b.term);
   const [examId, setExamId] = useState<string>(exams[exams.length - 1]?.id || "");
+
+  useEffect(() => {
+    if (!students.some(item => item.id === studentId)) setStudentId(students[0]?.id || "");
+  }, [students, studentId]);
+
+  useEffect(() => {
+    if (!exams.some(item => item.id === examId)) setExamId(exams[exams.length - 1]?.id || "");
+  }, [exams, examId]);
 
   const stats = student && examId ? statsForStudentExam(state.entries, student.id, state.subjects, state.sheets) : null;
   const weak  = student ? identifyWeakAreas(state.entries, state.subjects, state.sheets) : [];

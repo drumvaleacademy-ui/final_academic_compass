@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { gradeFor, type SheetStatus, type ID, type CurriculumId } from "@/lib/schoolData";
+import { belongsToCurriculum, gradeFor, type SheetStatus, type ID, type CurriculumId } from "@/lib/schoolData";
 import { AlertTriangle, Cloud, CloudOff, Save, Lock, Upload } from "lucide-react";
 import { FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -55,10 +55,10 @@ export default function MarkEntry() {
   const [importBusy, setImportBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const classes  = state.classes.filter(c => c.curriculumId === activeCurriculum);
+  const classes  = state.classes.filter(c => belongsToCurriculum(c.curriculumId, activeCurriculum));
   const streams  = state.streams.filter(s => s.classId === classId);
-  const subjects = state.subjects.filter(s => s.curriculumId === activeCurriculum);
-  const exams    = state.exams.filter(e => e.curriculumId === activeCurriculum);
+  const subjects = state.subjects.filter(s => belongsToCurriculum(s.curriculumId, activeCurriculum));
+  const exams    = state.exams.filter(e => belongsToCurriculum(e.curriculumId, activeCurriculum));
   const curriculum = state.curricula.find(c => c.id === activeCurriculum)!;
 
   const targetClasses = useMemo(() => {

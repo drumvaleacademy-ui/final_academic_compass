@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Lock, Unlock, Eye, BarChart3, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { belongsToCurriculum } from "@/lib/schoolData";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   draft:     { label: "Draft",     color: "text-gray-600",     bg: "bg-gray-100" },
@@ -22,9 +23,9 @@ export default function MarkSheets() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
 
-  const exams = useMemo(() => state.exams.filter(e => e.curriculumId === activeCurriculum), [state.exams, activeCurriculum]);
+  const exams = useMemo(() => state.exams.filter(e => belongsToCurriculum(e.curriculumId, activeCurriculum)), [state.exams, activeCurriculum]);
 
-  let sheets = useMemo(() => state.sheets.filter(s => s.curriculumId === activeCurriculum), [state.sheets, activeCurriculum]);
+  let sheets = useMemo(() => state.sheets.filter(s => belongsToCurriculum(s.curriculumId, activeCurriculum)), [state.sheets, activeCurriculum]);
   if (examFilter !== "all") sheets = sheets.filter(s => s.examId === examFilter);
   if (statusFilter !== "all") sheets = sheets.filter(s => s.status === statusFilter);
   if (search) {

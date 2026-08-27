@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useSchool } from "@/store/school";
 import { useAuth } from "@/store/auth";
 import { PageHeader } from "@/components/PageHeader";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Lock, Pencil, Trash2, Plus, CalendarDays, Search, Download } from "lucide-react";
-import { TimetableSlot } from "@/lib/schoolData";
+import { belongsToCurriculum, TimetableSlot } from "@/lib/schoolData";
 import { toast } from "sonner";
 
 const DAYS = ["Mon","Tue","Wed","Thu","Fri"];
@@ -19,10 +19,18 @@ export default function Timetable() {
   const { state, activeCurriculum, upsertTimetableSlot, removeTimetableSlot } = useSchool();
   const { canEditTimetable } = useAuth();
 
-  const classes = state.classes.filter(c => c.curriculumId === activeCurriculum);
+  const classes = state.classes.filter(c => belongsToCurriculum(c.curriculumId, activeCurriculum));
   const [classId, setClassId] = useState(classes[0]?.id ?? "");
   const streams = state.streams.filter(s => s.classId === classId);
   const [streamId, setStreamId] = useState<string>("");
+
+  useEffect(() => {
+    if (!classes.some(item => item.id === classId)) setClassId(classes[0]?.id ?? "");
+  }, [classes, classId]);
+
+  useEffect(() => {
+    if (streamId && !streams.some(item => item.id === streamId)) setStreamId("");
+  }, [streams, streamId]);
 
   const slots = useMemo(() => (state.timetable ?? []).filter(t =>
     t.classId === classId && (streamId ? t.streamId === streamId : true)
@@ -193,7 +201,7 @@ export default function Timetable() {
                 <Select value={editing.subjectId ?? ""} onValueChange={(v) => setEditing({ ...editing, subjectId: v })} disabled={!canEditTimetable}>
                   <SelectTrigger><SelectValue placeholder="Choose subject"/></SelectTrigger>
                   <SelectContent>
-                    {state.subjects.filter(s => s.curriculumId === activeCurriculum).map(s =>
+                    {state.subjects.filter(s => belongsToCurriculum(s.curriculumId, activeCurriculum)).map(s =>
                       <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -203,7 +211,7 @@ export default function Timetable() {
                 <Select value={editing.teacherId ?? ""} onValueChange={(v) => setEditing({ ...editing, teacherId: v })} disabled={!canEditTimetable}>
                   <SelectTrigger><SelectValue placeholder="Assign teacher"/></SelectTrigger>
                   <SelectContent>
-                    {state.teachers.filter(t => t.curriculumIds.includes(activeCurriculum)).map(t =>
+                    {state.teachers.filter(t => t.curriculumIds.some(id => belongsToCurriculum(id, activeCurriculum))).map(t =>
                       <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                   </SelectContent>
                 </Select>

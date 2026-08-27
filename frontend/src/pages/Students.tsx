@@ -13,6 +13,7 @@ import * as XLSX from "xlsx";
 import { PDFParse } from "pdf-parse";
 import { GlobalWorkerOptions } from "pdfjs-dist";
 import mammoth from "mammoth";
+import { belongsToCurriculum } from "@/lib/schoolData";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -36,9 +37,9 @@ export default function Students() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<{ admissionNo: string; name: string }[] | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; admissionNo: string } | null>(null);
-  const classes = state.classes.filter(c => c.curriculumId === activeCurriculum);
+  const classes = state.classes.filter(c => belongsToCurriculum(c.curriculumId, activeCurriculum));
   const streams = state.streams.filter(s => classFilter === "all" || s.classId === classFilter);
-  const students = state.students.filter(s => s.curriculumId === activeCurriculum)
+  const students = state.students.filter(s => belongsToCurriculum(s.curriculumId, activeCurriculum))
     .filter(s => classFilter === "all" || s.classId === classFilter)
     .filter(s => streamFilter === "all" || s.streamId === streamFilter)
     .filter(s => !q || s.name.toLowerCase().includes(q.toLowerCase()) || s.admissionNo.toLowerCase().includes(q.toLowerCase()));

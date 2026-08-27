@@ -17,6 +17,14 @@ export type SheetStatus = "draft" | "open" | "closed";
 export type ID = string;
 export type CurriculumId = "cbc" | "844";
 
+export function normalizeCurriculumId(value: unknown): string {
+  return String(value ?? "cbc").trim().toLowerCase();
+}
+
+export function belongsToCurriculum(value: unknown, selected: string): boolean {
+  return normalizeCurriculumId(value) === normalizeCurriculumId(selected);
+}
+
 export interface MarkEntry {
   id: string;
   sheetId: string;

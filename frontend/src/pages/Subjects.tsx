@@ -5,18 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Search, X } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { belongsToCurriculum } from "@/lib/schoolData";
 
 export default function Subjects() {
   const { state, activeCurriculum, update, saveDetails } = useSchool();
   const [searchQuery, setSearchQuery] = useState("");
   const subjects = state.subjects.filter(s => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return s.curriculumId === activeCurriculum;
-    return s.curriculumId === activeCurriculum && (
+    if (!q) return belongsToCurriculum(s.curriculumId, activeCurriculum);
+    return belongsToCurriculum(s.curriculumId, activeCurriculum) && (
       s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q)
     );
   });
-  const teachers = state.teachers.filter(t => t.curriculumIds.includes(activeCurriculum));
+  const teachers = state.teachers.filter(t => t.curriculumIds.some(id => belongsToCurriculum(id, activeCurriculum)));
 
   const add = () => update(s => {
     s.subjects.push({ id: `sub_${Date.now()}`, curriculumId: activeCurriculum, name: "New Subject", code: "NEW" });

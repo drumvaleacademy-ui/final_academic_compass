@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { createMarkSheetsForExam } from "@/lib/schoolData";
+import { belongsToCurriculum } from "@/lib/schoolData";
 import { Input } from "@/components/ui/input";
 
 export default function Exams() {
@@ -14,8 +15,8 @@ export default function Exams() {
   const [searchQuery, setSearchQuery] = useState("");
   const exams = state.exams.filter(e => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return e.curriculumId === activeCurriculum;
-    return e.curriculumId === activeCurriculum && (
+    if (!q) return belongsToCurriculum(e.curriculumId, activeCurriculum);
+    return belongsToCurriculum(e.curriculumId, activeCurriculum) && (
       e.name.toLowerCase().includes(q) || String(e.term).includes(q) || e.status.toLowerCase().includes(q)
     );
   });

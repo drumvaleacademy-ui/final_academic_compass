@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { useSchool } from "@/store/school";
 import { Badge } from "@/components/ui/badge";
 import { useMemo } from "react";
+import { belongsToCurriculum } from "@/lib/schoolData";
 
 export default function Marks() {
   const { state, activeCurriculum } = useSchool();
@@ -12,7 +13,7 @@ export default function Marks() {
     const subject = state.subjects.find((item) => item.id === sheet?.subjectId);
     const exam = state.exams.find((item) => item.id === sheet?.examId);
     return { ...entry, student: student?.name ?? "Unknown student", subject: subject?.name ?? "Unknown subject", exam: exam?.name ?? "Unknown exam" };
-  }).filter((row) => state.sheets.find((sheet) => sheet.id === row.sheetId)?.curriculumId === activeCurriculum), [state, activeCurriculum]);
+  }).filter((row) => belongsToCurriculum(state.sheets.find((sheet) => sheet.id === row.sheetId)?.curriculumId, activeCurriculum)), [state, activeCurriculum]);
 
   return (
     <div>

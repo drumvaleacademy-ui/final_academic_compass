@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
+import { belongsToCurriculum } from "@/lib/schoolData";
 import * as XLSX from "xlsx";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -24,13 +25,13 @@ export default function Classes() {
     const extractTargetRef = useRef<{ classId: string; streamId: string; label: string } | null>(null);
   const classes = state.classes.filter(c => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return c.curriculumId === activeCurriculum;
-    return c.curriculumId === activeCurriculum && c.name.toLowerCase().includes(q);
+    if (!q) return belongsToCurriculum(c.curriculumId, activeCurriculum);
+    return belongsToCurriculum(c.curriculumId, activeCurriculum) && c.name.toLowerCase().includes(q);
   });
-  const teachers = state.teachers.filter(t => t.curriculumIds.includes(activeCurriculum));
+  const teachers = state.teachers.filter(t => t.curriculumIds.some(id => belongsToCurriculum(id, activeCurriculum)));
 
   const addClass = () => update((s) => {
-    const existing = s.classes.filter((item) => item.curriculumId === activeCurriculum).length;
+    const existing = s.classes.filter((item) => belongsToCurriculum(item.curriculumId, activeCurriculum)).length;
     const name = activeCurriculum === "cbc" ? `Grade ${existing + 1}` : `Form ${existing + 1}`;
     const id = `cls_${Date.now()}`;
     s.classes.push({ id, curriculumId: activeCurriculum, name });

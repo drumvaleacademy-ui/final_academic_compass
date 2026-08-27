@@ -202,6 +202,7 @@ export async function fetchSchoolSnapshot(): Promise<SchoolSnapshot | null> {
     const classCurricula = new Map(classes.map((item: any) => [item.id, item.curriculumId]));
     return {
       ...snapshot,
+      curricula: (snapshot.curricula ?? []).map((item: any) => ({ ...item, id: String(item.id ?? "").trim().toLowerCase() })),
       classes,
       streams: (snapshot.streams ?? []).map((item: any) => ({ ...item, classId: String(item.classId ?? "") })),
       students: (snapshot.students ?? []).map((item: any) => ({

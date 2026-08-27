@@ -62,6 +62,10 @@ export class SyncService {
     const merged = this.mergeSnapshots(current.data, payload);
     const now = new Date();
     const db: any = this.prisma;
+    const existingClasses = new Map<string, any>((current.data?.classes ?? []).map((item: any) => [item.id, item]));
+    const existingStreams = new Map<string, any>((current.data?.streams ?? []).map((item: any) => [item.id, item]));
+    const existingSubjects = new Map<string, any>((current.data?.subjects ?? []).map((item: any) => [item.id, item]));
+    const existingStudents = new Map<string, any>((current.data?.students ?? []).map((item: any) => [item.id, item]));
 
     await db.$transaction(async (tx: any) => {
       const deletedIds = (merged.deletedIds ?? []).map(String);
@@ -77,6 +81,8 @@ export class SyncService {
       }
 
       for (const item of merged.classes ?? []) {
+        const previous = existingClasses.get(item.id);
+        if (previous && previous.name === item.name && previous.curriculumId === (item.curriculumId ?? "cbc")) continue;
         await tx.class.upsert({
           where: { id: item.id },
           update: { name: item.name, curriculumId: item.curriculumId ?? "cbc", isActive: true },
@@ -84,6 +90,8 @@ export class SyncService {
         });
       }
       for (const item of merged.streams ?? []) {
+        const previous = existingStreams.get(item.id);
+        if (previous && previous.name === item.name && previous.classId === item.classId) continue;
         await tx.stream.upsert({
           where: { id: item.id },
           update: { name: item.name, classId: item.classId },
@@ -91,6 +99,8 @@ export class SyncService {
         });
       }
       for (const item of merged.subjects ?? []) {
+        const previous = existingSubjects.get(item.id);
+        if (previous && previous.name === item.name && previous.code === (item.code ?? item.name) && previous.curriculumId === (item.curriculumId ?? "cbc")) continue;
         await tx.subject.upsert({
           where: { id: item.id },
           update: { name: item.name, code: item.code ?? item.name, curriculumId: item.curriculumId ?? "cbc" },
@@ -98,6 +108,8 @@ export class SyncService {
         });
       }
       for (const item of merged.students ?? []) {
+        const previous = existingStudents.get(item.id);
+        if (previous && previous.admissionNo === item.admissionNo && previous.name === item.name && previous.gender === item.gender && previous.classId === item.classId && previous.streamId === item.streamId) continue;
         await tx.student.upsert({
           where: { id: item.id },
           update: { admissionNo: item.admissionNo, fullName: item.name, gender: item.gender, classId: item.classId, streamId: item.streamId, isActive: true },

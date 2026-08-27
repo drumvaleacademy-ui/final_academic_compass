@@ -347,7 +347,9 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      let saveToast: string | number | undefined;
       try {
+        saveToast = toast.loading("Saving details...");
         const snap = {
           students: state.students,
           teachers: state.teachers,
@@ -369,13 +371,13 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
           localChangesRef.current = false;
             cacheSnapshot(session?.user.id, snap);
             setState(prev => ({ ...prev, lastSyncAt: new Date().toISOString(), syncQueue: [] }));
-            toast.success("Details saved");
+            toast.success("Details saved", { id: saveToast });
         } else {
-          toast.error("Failed to save details. Check your connection and sign-in status.");
+          toast.error("Failed to save details. Check your connection and sign-in status.", { id: saveToast });
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to save details.";
-        toast.error(message);
+        toast.error(message, { id: saveToast });
       }
     },
   };

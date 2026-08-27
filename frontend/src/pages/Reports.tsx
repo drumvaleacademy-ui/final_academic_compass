@@ -234,8 +234,6 @@ export default function Reports() {
         }
       />
 
-      {selectedStudent && selectedExam && <div ref={reportRef} className="report-preview bg-background p-2"><ReportCardPreview schoolName={state.settings.schoolName} studentId={selectedStudent.id} studentName={selectedStudent.name} admissionNumber={selectedStudent.admissionNo} className={reportClass?.name} stream={reportStream?.name} term={`Term ${selectedExam.term}`} year={selectedExam.year} subjects={reportCardSubjects} teacherName="" principalName={state.settings.principalName} curriculumName={reportCurriculum?.name || reportCurriculum?.shortName || selectedExam.curriculumId} termEndDate={selectedExam.endDate} nextTermStartDate={nextTermExam?.startDate} /></div>}
-
       <Card className="p-4 space-y-4">
         <div className="flex flex-wrap gap-2 items-center">
           <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Search</label><input className="inline-edit min-w-[220px]" placeholder="Learner, teacher, class..." value={search} onChange={(event) => setSearch(event.target.value)} /></div>

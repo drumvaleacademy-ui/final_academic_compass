@@ -20,7 +20,9 @@ export default function Classes() {
   const [pendingDelete, setPendingDelete] = useState<{ entity: "class" | "stream"; id: string; label: string } | null>(null);
     const [extractTarget, setExtractTarget] = useState<{ classId: string; streamId: string; label: string } | null>(null);
     const [extractRows, setExtractRows] = useState<{ admissionNo: string; name: string }[] | null>(null);
+    const [extracting, setExtracting] = useState(false);
     const extractFileRef = useRef<HTMLInputElement>(null);
+    const extractTargetRef = useRef<{ classId: string; streamId: string; label: string } | null>(null);
   const classes = state.classes.filter(c => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return c.curriculumId === activeCurriculum;
@@ -63,7 +65,8 @@ export default function Classes() {
 
   const extractStudents = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !extractTarget) return;
+    const target = extractTargetRef.current;
+    if (!file || !target) return;
     try {
       const workbook = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -87,11 +90,13 @@ export default function Classes() {
   };
 
   const confirmExtraction = async () => {
-    if (!extractRows || !extractTarget) return;
+    const target = extractTargetRef.current;
+    if (!extractRows || !target || extracting) return;
+    setExtracting(true);
     const existingKeys = new Set(state.students.map(student => `${student.classId}:${student.streamId}:${student.admissionNo.trim().toLowerCase()}`));
     const imported = extractRows.filter(row => {
       const identity = row.admissionNo.trim().toLowerCase() || `name:${row.name.trim().toLowerCase()}`;
-      const key = `${extractTarget.classId}:${extractTarget.streamId}:${identity}`;
+      const key = `${target.classId}:${target.streamId}:${identity}`;
       if (existingKeys.has(key)) return false;
       existingKeys.add(key);
       return true;
@@ -101,13 +106,14 @@ export default function Classes() {
       admissionNo: row.admissionNo || `PENDING/${state.settings.academicYear}/${index + 1}`,
       name: row.name || "New Student",
       gender: "M" as const,
-      classId: extractTarget.classId,
-      streamId: extractTarget.streamId,
+      classId: target.classId,
+      streamId: target.streamId,
       vap: "",
     }));
     if (!imported.length) {
       toast.error("All extracted students are already registered in this stream.");
       setExtractRows(null);
+      setExtracting(false);
       return;
     }
     const snapshot = {
@@ -119,11 +125,14 @@ export default function Classes() {
     try {
       await pushSchoolSnapshot(snapshot);
       update(s => { s.students.push(...imported); }, { markDirty: false });
-      toast.success(`${imported.length} student${imported.length === 1 ? "" : "s"} extracted and saved to ${extractTarget.label}.`);
+      toast.success(`${imported.length} student${imported.length === 1 ? "" : "s"} extracted and saved to ${target.label}.`);
       setExtractRows(null);
       setExtractTarget(null);
+      extractTargetRef.current = null;
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Students could not be saved.");
+    } finally {
+      setExtracting(false);
     }
   };
 
@@ -185,7 +194,7 @@ export default function Classes() {
                      <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={`Delete ${str.name}`} onClick={() => setPendingDelete({ entity: "stream", id: str.id, label: str.name })}>
                       <Trash2 className="h-3 w-3 text-destructive"/>
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={`Extract students into ${str.name}`} onClick={() => { setExtractTarget({ classId: c.id, streamId: str.id, label: `${c.name} ${str.name}` }); extractFileRef.current?.click(); }}>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={`Extract students into ${str.name}`} onClick={() => { const target = { classId: c.id, streamId: str.id, label: `${c.name} ${str.name}` }; extractTargetRef.current = target; setExtractTarget(target); extractFileRef.current?.click(); }}>
                       <Upload className="h-3 w-3 text-primary" />
                     </Button>
                   </div>
@@ -199,17 +208,17 @@ export default function Classes() {
       </div>
 
       <input ref={extractFileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={extractStudents} />
-      <AlertDialog open={extractRows !== null} onOpenChange={(open) => { if (!open) { setExtractRows(null); setExtractTarget(null); } }}>
+      <AlertDialog open={extractRows !== null} onOpenChange={(open) => { if (!open && !extracting) { setExtractRows(null); setExtractTarget(null); extractTargetRef.current = null; } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-primary" /> Extract students</AlertDialogTitle>
-            <AlertDialogDescription>Review {extractRows?.length ?? 0} rows for <strong>{extractTarget?.label}</strong>. Names and admission numbers will be saved now; missing fields can be completed later in Students.</AlertDialogDescription>
+            <AlertDialogDescription>Review {extractRows?.length ?? 0} rows for <strong>{extractTarget?.label}</strong>. Use columns named <strong>Name</strong> and <strong>AdmissionNo</strong> (or Student Name and Admission Number), one student per row. A simple two-column file with admission number first and name second also works. Missing fields can be completed later in Students.</AlertDialogDescription>
           </AlertDialogHeader>
           <div className="max-h-64 overflow-y-auto rounded-md border text-sm">
             {extractRows?.slice(0, 50).map((row, index) => <div key={`${row.admissionNo}-${index}`} className="grid grid-cols-2 gap-3 border-b px-3 py-2 last:border-0"><span>{row.name || "New Student"}</span><span className="font-mono text-muted-foreground">{row.admissionNo || "Generated later"}</span></div>)}
             {(extractRows?.length ?? 0) > 50 && <div className="px-3 py-2 text-xs text-muted-foreground">Showing first 50 rows.</div>}
           </div>
-          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmExtraction}>Save extracted students</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogFooter><AlertDialogCancel disabled={extracting}>Cancel</AlertDialogCancel><AlertDialogAction disabled={extracting} onClick={confirmExtraction}>{extracting ? "Saving students..." : "Save extracted students"}</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 

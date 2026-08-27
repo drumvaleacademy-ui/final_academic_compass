@@ -152,11 +152,11 @@ export default function AppShell() {
   );
 
   return (
-    <div className="min-h-screen text-foreground flex bg-background overflow-x-hidden">
+    <div className="min-h-screen lg:h-screen text-foreground flex bg-background overflow-x-hidden lg:overflow-hidden">
       <aside className="hidden lg:flex w-64 shrink-0 sticky top-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex-col">
         <SidebarContent />
       </aside>
-      <div className="min-w-0 flex-1 flex flex-col">
+      <div className="min-w-0 flex-1 flex flex-col lg:h-screen lg:overflow-y-auto">
       {/* Header with key quick links */}
       <header className="sticky top-0 z-40 bg-card/95 backdrop-blur border-b no-print">
         <div className="px-4 lg:px-6">

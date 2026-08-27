@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Lock, Download, Upload, Shield, Search, X } from "lucide-react";
+import { Plus, Trash2, Lock, Download, Upload, Shield, Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef, useEffect, useState } from "react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -52,6 +52,8 @@ export default function Teachers() {
   const [password, setPassword] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [removeTarget, setRemoveTarget] = useState<BackendProfile | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 12;
 
   const pendingProfiles = backendProfiles.filter(p => !p.approved);
   const filteredProfiles = backendProfiles.filter(p => {
@@ -61,6 +63,8 @@ export default function Teachers() {
       p.email.toLowerCase().includes(q) ||
       (p.department || "").toLowerCase().includes(q);
   });
+  const pageCount = Math.max(1, Math.ceil(filteredProfiles.length / pageSize));
+  const paginatedProfiles = filteredProfiles.slice((page - 1) * pageSize, page * pageSize);
 
   const fetchProfiles = async () => {
     if (!isPrincipal) return;
@@ -302,7 +306,7 @@ export default function Teachers() {
               <Input
                 placeholder="Search staff..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
                 className="pl-9 h-9 w-64"
               />
             </div>
@@ -320,7 +324,7 @@ export default function Teachers() {
               <div className="md:col-span-2 xl:col-span-3 py-10 text-center text-muted-foreground">Loading registered staff...</div>
             ) : filteredProfiles.length === 0 ? (
               <div className="md:col-span-2 xl:col-span-3 py-10 text-center text-muted-foreground">No staff match your search.</div>
-            ) : filteredProfiles.map((p) => {
+            ) : paginatedProfiles.map((p) => {
               const isPrincipalRow = p.roles.some(role => ["PLATFORM_ADMIN", "PRINCIPAL", "admin", "principal"].includes(role));
               return <Card key={p.id} className="p-4 space-y-4 border-border/80">
                 <div className="flex items-start gap-3">
@@ -333,6 +337,16 @@ export default function Teachers() {
               </Card>;
             })}
           </div>
+          {filteredProfiles.length > pageSize && (
+            <div className="flex items-center justify-between border-t pt-3">
+              <span className="text-xs text-muted-foreground">Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, filteredProfiles.length)} of {filteredProfiles.length} staff</span>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" aria-label="Previous staff page" disabled={page === 1} onClick={() => setPage(current => Math.max(1, current - 1))}><ChevronLeft className="h-4 w-4" /></Button>
+                <span className="text-xs font-medium">Page {page} of {pageCount}</span>
+                <Button variant="outline" size="icon" aria-label="Next staff page" disabled={page === pageCount} onClick={() => setPage(current => Math.min(pageCount, current + 1))}><ChevronRight className="h-4 w-4" /></Button>
+              </div>
+            </div>
+          )}
           <div className="hidden overflow-x-auto border border-border rounded-lg min-w-[640px]">
             <table className="w-full text-sm text-left">
               <thead className="bg-muted text-muted-foreground text-xs uppercase font-medium border-b border-border">

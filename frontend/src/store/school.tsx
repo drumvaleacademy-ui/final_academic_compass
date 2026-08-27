@@ -218,6 +218,16 @@ const defaultState: SchoolState = {
   deletedIds: [],
 };
 
+function cachedState(userId: string | undefined): SchoolState {
+  if (!userId || typeof window === "undefined") return defaultState;
+  try {
+    const cached = JSON.parse(localStorage.getItem(`ac_school_snapshot_${userId}`) || "null");
+    return cached ? { ...defaultState, ...cached } : defaultState;
+  } catch {
+    return defaultState;
+  }
+}
+
 const Ctx = createContext<SchoolContextValue>({
   state: defaultState,
   activeCurriculum: "cbc",
@@ -233,8 +243,13 @@ const Ctx = createContext<SchoolContextValue>({
 });
 
 export function SchoolProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<SchoolState>(defaultState);
   const { session, loading: authLoading } = useAuth();
+  const [state, setState] = useState<SchoolState>(() => cachedState(session?.user.id));
+
+  const cacheSnapshot = (userId: string | undefined, snapshot: unknown) => {
+    if (!userId || typeof window === "undefined") return;
+    try { localStorage.setItem(`ac_school_snapshot_${userId}`, JSON.stringify(snapshot)); } catch (_e) {}
+  };
 
   const update = useCallback((fn: (s: SchoolState) => void) => {
     setState((prev) => {
@@ -352,6 +367,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
           try {
             const server = await fetchSchoolSnapshot();
             if (server) {
+              cacheSnapshot(session?.user.id, server);
               setState(prev => ({
                 ...prev,
                 students: server.students ?? prev.students,
@@ -409,6 +425,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
           if (localStorage.getItem("ac_token")) {
             const server = await fetchSchoolSnapshot();
             if (server) {
+              cacheSnapshot(session?.user.id, server);
               setState(prev => ({
                 ...prev,
                 students: server.students ?? prev.students,

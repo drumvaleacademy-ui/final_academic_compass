@@ -170,17 +170,17 @@ export default function Profile() {
 
       <div className="grid md:grid-cols-3 gap-4 md:gap-6">
         {/* User card */}
-        <Card className="p-4 md:p-6 flex flex-col items-center justify-center text-center space-y-4 md:col-span-1">
-          <div className="h-24 w-24 rounded-full bg-primary/10 text-primary grid place-items-center mb-2">
-            <UserIcon className="h-12 w-12" />
+        <Card className="p-4 md:p-6 flex flex-row md:flex-col items-start md:items-center justify-center text-left md:text-center gap-4 md:gap-5 md:col-span-1 border-l-4 border-primary">
+          <div className="h-20 w-20 shrink-0 rounded-xl bg-primary/10 text-primary grid place-items-center">
+            <UserIcon className="h-10 w-10" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h2 className="text-xl font-bold">{user?.full_name || "School Member"}</h2>
-            <p className="text-sm text-muted-foreground flex items-center justify-center gap-1 mt-1">
+            <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1 truncate">
               <Mail className="h-3 w-3" /> {user?.email}
             </p>
           </div>
-          <div className="w-full pt-4 border-t border-border space-y-2 text-left">
+          <div className="w-full pt-4 border-t border-border space-y-2 text-left md:col-span-2">
             <div className="flex justify-between items-center text-xs text-muted-foreground">
               <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> Registered</span>
               <span className="font-medium text-foreground">{user?.id ? "Active Account" : "N/A"}</span>

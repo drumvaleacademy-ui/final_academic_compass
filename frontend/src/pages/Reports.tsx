@@ -9,11 +9,13 @@ import {
   SchoolLogoIcon } from "@/components/SchoolLogo";
 import { Download, FileText, Printer, Calendar, Users, GraduationCap } from "lucide-react";
 import { useSchool } from "@/store/school";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 
 interface ReportCardProps {
   schoolName?: string;
@@ -73,10 +75,14 @@ export default function Reports() {
   const { state } = useSchool();
   const [searchParams] = useSearchParams();
   const [studentId, setStudentId] = useState(searchParams.get("studentId") || searchParams.get("student") || "");
-  const classFilter = searchParams.get("classId") || "";
+  const [classFilter, setClassFilter] = useState(searchParams.get("classId") || "");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"learner" | "teacher" | "class" | "subject">("learner");
+  const [examId, setExamId] = useState("");
+  const reportRef = useRef<HTMLDivElement>(null);
   const selectedStudent = state.students.find((student) => student.id === studentId);
+  const classes = state.classes;
+  const exams = state.exams.filter((exam) => exam.status !== "draft");
 
   const reportRows = useMemo(() => {
     const rows = state.entries.map((entry) => {
@@ -87,18 +93,47 @@ export default function Reports() {
       const classItem = state.classes.find((item) => item.id === sheet?.classId || item.id === student?.classId);
       const stream = state.streams.find((item) => item.id === student?.streamId);
       const teacher = state.teachers.find((item) => item.id === sheet?.teacherId || item.id === subject?.teacherId);
-      return { id: entry.id, learner: student?.name ?? "Unknown learner", admission: student?.admissionNo ?? "", teacher: teacher?.name ?? "Unassigned", className: classItem?.name ?? "Unassigned", stream: stream?.name ?? "", subject: subject?.name ?? "Unknown subject", exam: exam?.name ?? "Unknown exam", score: entry.score, pending: entry.pending };
+      return { id: entry.id, studentId: student?.id, learner: student?.name ?? "Unknown learner", admission: student?.admissionNo ?? "", teacher: teacher?.name ?? "Unassigned", className: classItem?.name ?? "Unassigned", stream: stream?.name ?? "", subject: subject?.name ?? "Unknown subject", exam: exam?.name ?? "Unknown exam", score: entry.score, pending: entry.pending };
     });
     const q = search.trim().toLowerCase();
     const sortKey: "learner" | "teacher" | "className" | "subject" = sortBy === "class" ? "className" : sortBy;
-    return rows.filter((row) => (!classFilter || state.classes.find((item) => item.name === row.className)?.id === classFilter) && (!q || [row.learner, row.admission, row.teacher, row.className, row.subject, row.exam].some((value) => value.toLowerCase().includes(q)))).sort((a, b) => String(a[sortKey] ?? "").localeCompare(String(b[sortKey] ?? "")));
-  }, [state, search, sortBy, classFilter]);
+    return rows.filter((row) => (!classFilter || state.classes.find((item) => item.name === row.className)?.id === classFilter) && (!examId || state.exams.find((item) => item.name === row.exam)?.id === examId) && (!q || [row.learner, row.admission, row.teacher, row.className, row.subject, row.exam].some((value) => value.toLowerCase().includes(q)))).sort((a, b) => String(a[sortKey] ?? "").localeCompare(String(b[sortKey] ?? "")));
+  }, [state, search, sortBy, classFilter, examId]);
 
   const printReports = () => window.print();
-  const exportReports = () => {
-    const csv = ["Learner,Admission,Teacher,Class,Stream,Subject,Exam,Score,Status", ...reportRows.map((row) => [row.learner, row.admission, row.teacher, row.className, row.stream, row.subject, row.exam, row.score ?? "", row.pending ? "Pending" : "Saved"].map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","))].join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a"); link.href = url; link.download = "academic-reports.csv"; link.click(); URL.revokeObjectURL(url);
+  const selectedExam = exams.find((exam) => exam.id === examId) ?? exams[exams.length - 1];
+  const reportCardSubjects = useMemo(() => {
+    if (!selectedStudent || !selectedExam) return [];
+    return state.subjects.map((subject) => {
+      const sheet = state.sheets.find((item) => item.examId === selectedExam.id && item.subjectId === subject.id && item.classId === selectedStudent.classId);
+      const entry = sheet ? state.entries.find((item) => item.sheetId === sheet.id && item.studentId === selectedStudent.id) : undefined;
+      const score = entry?.score ?? null;
+      return { name: subject.name, code: subject.code, cat1: null, cat2: null, exam: score, total: score ?? 0, grade: score == null ? "-" : gradeFor(score), teacherComment: sheet?.teacherComment };
+    }).filter((subject) => subject.exam !== null);
+  }, [selectedStudent, selectedExam, state]);
+  const reportClass = selectedStudent ? state.classes.find((item) => item.id === selectedStudent.classId) : undefined;
+  const reportStream = selectedStudent ? state.streams.find((item) => item.id === selectedStudent.streamId) : undefined;
+
+  const exportReports = async () => {
+    if (!selectedStudent || !selectedExam || !reportRef.current) { toast.error("Select a learner with an exam before exporting."); return; }
+    try {
+      const canvas = await html2canvas(reportRef.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+      const pdf = new jsPDF("p", "mm", "a4");
+      const width = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const renderedHeight = (canvas.height * width) / canvas.width;
+      const image = canvas.toDataURL("image/png");
+      for (let offset = 0; offset < renderedHeight; offset += pageHeight) {
+        if (offset > 0) pdf.addPage();
+        pdf.addImage(image, "PNG", 0, -offset, width, renderedHeight, undefined, "FAST");
+      }
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const safe = (value: string) => value.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "");
+      pdf.save(`report-${safe(reportClass?.name || "class")}-${safe(selectedStudent.name)}-${stamp}.pdf`);
+      toast.success("Report PDF exported");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not export this report as PDF.");
+    }
   };
 
   const sendReportCard = async () => {
@@ -123,16 +158,24 @@ export default function Reports() {
         description="Generate, view, and print student report cards with official school letterhead."
         actions={
           <div className="flex gap-2">
-            <Select value={studentId} onValueChange={setStudentId}>
-              <SelectTrigger className="w-52"><SelectValue placeholder="Select student" /></SelectTrigger>
+            <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Learner</label><Select value={studentId} onValueChange={setStudentId}>
+              <SelectTrigger className="w-52"><SelectValue placeholder="Select learner" /></SelectTrigger>
               <SelectContent>{state.students.map((student) => <SelectItem key={student.id} value={student.id}>{student.name}</SelectItem>)}</SelectContent>
-            </Select>
+            </Select></div>
+            <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Class</label><Select value={classFilter || "all"} onValueChange={(value) => setClassFilter(value === "all" ? "" : value)}>
+              <SelectTrigger className="w-44"><SelectValue placeholder="All classes" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All classes</SelectItem>{classes.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent>
+            </Select></div>
+            <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Exam</label><Select value={examId || "all"} onValueChange={(value) => setExamId(value === "all" ? "" : value)}>
+              <SelectTrigger className="w-44"><SelectValue placeholder="All exams" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All exams</SelectItem>{exams.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent>
+            </Select></div>
             <Button variant="outline" size="sm" onClick={sendReportCard} disabled={!selectedStudent}>Send SMS</Button>
             <Button variant="outline" size="sm" onClick={printReports}>
               <Printer className="h-4 w-4 mr-1" />
               Print Preview
             </Button>
-            <Button variant="outline" size="sm" onClick={exportReports} disabled={!reportRows.length}>
+            <Button variant="outline" size="sm" onClick={exportReports} disabled={!selectedStudent || !selectedExam}>
               <Download className="h-4 w-4 mr-1" />
               Export PDF
             </Button>
@@ -142,17 +185,19 @@ export default function Reports() {
 
       <Card className="p-4 space-y-4">
         <div className="flex flex-wrap gap-2 items-center">
-          <input className="inline-edit min-w-[220px]" placeholder="Search learner, teacher, class, subject..." value={search} onChange={(event) => setSearch(event.target.value)} />
-          <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+          <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Search</label><input className="inline-edit min-w-[220px]" placeholder="Learner, teacher, class..." value={search} onChange={(event) => setSearch(event.target.value)} /></div>
+          <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Sort results</label><Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
             <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="learner">Sort by learner</SelectItem><SelectItem value="teacher">Sort by teacher</SelectItem><SelectItem value="class">Sort by class</SelectItem><SelectItem value="subject">Sort by subject</SelectItem></SelectContent>
-          </Select>
+            <SelectContent><SelectItem value="learner">Learner</SelectItem><SelectItem value="teacher">Teacher</SelectItem><SelectItem value="class">Class</SelectItem><SelectItem value="subject">Subject</SelectItem></SelectContent>
+          </Select></div>
           <Badge variant="outline">{reportRows.length} result{reportRows.length === 1 ? "" : "s"}</Badge>
         </div>
         <div className="overflow-x-auto border rounded-md">
-          <table className="data-table min-w-[980px]"><thead><tr><th>Learner</th><th>Teacher</th><th>Class</th><th>Subject</th><th>Exam</th><th>Score</th><th>Status</th></tr></thead><tbody>{reportRows.length ? reportRows.map((row) => <tr key={row.id}><td><div className="font-medium">{row.learner}</div><div className="text-xs text-muted-foreground">{row.admission}</div></td><td>{row.teacher}</td><td>{row.className} {row.stream && `· ${row.stream}`}</td><td>{row.subject}</td><td>{row.exam}</td><td className="font-semibold">{row.score ?? "Not entered"}</td><td>{row.pending ? <Badge variant="outline">Pending</Badge> : <Badge>Saved</Badge>}</td></tr>) : <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">No report results exist yet. Enter marks to generate reports for each learner.</td></tr>}</tbody></table>
+          <table className="data-table min-w-[980px]"><thead><tr><th>Learner</th><th>Teacher</th><th>Class</th><th>Subject</th><th>Exam</th><th>Score</th><th>Status</th></tr></thead><tbody>{reportRows.length ? reportRows.map((row) => <tr key={row.id} className="cursor-pointer hover:bg-muted/40" onClick={() => row.studentId && setStudentId(row.studentId)}><td><button type="button" className="text-left"><div className="font-medium text-primary">{row.learner}</div><div className="text-xs text-muted-foreground">{row.admission}</div></button></td><td>{row.teacher}</td><td>{row.className} {row.stream && `· ${row.stream}`}</td><td>{row.subject}</td><td>{row.exam}</td><td className="font-semibold">{row.score ?? "Not entered"}</td><td>{row.pending ? <Badge variant="outline">Pending</Badge> : <Badge>Saved</Badge>}</td></tr>) : <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">No report results exist yet. Enter marks to generate reports for each learner.</td></tr>}</tbody></table>
         </div>
       </Card>
+
+      {selectedStudent && selectedExam && <div ref={reportRef} className="bg-background p-2"><ReportCardPreview schoolName={state.settings.schoolName} studentId={selectedStudent.id} studentName={selectedStudent.name} admissionNumber={selectedStudent.admissionNo} className={reportClass?.name} stream={reportStream?.name} term={`Term ${selectedExam.term}`} year={selectedExam.year} subjects={reportCardSubjects} teacherName="" principalName={state.settings.principalName} /></div>}
 
     </div>
   );

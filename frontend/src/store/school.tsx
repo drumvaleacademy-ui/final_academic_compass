@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from "react";
 import { pushSchoolSnapshot, fetchSchoolSnapshot, fetchPendingConflicts, resolveRemoteConflict } from "@/lib/syncService";
+import { useAuth } from "@/store/auth";
 import { toast } from "sonner";
 
 export interface GradeBand {
@@ -233,6 +234,7 @@ const Ctx = createContext<SchoolContextValue>({
 
 export function SchoolProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SchoolState>(defaultState);
+  const { session, loading: authLoading } = useAuth();
 
   const update = useCallback((fn: (s: SchoolState) => void) => {
     setState((prev) => {
@@ -434,7 +436,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
     };
-  }, []);
+  }, [authLoading, session?.token]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

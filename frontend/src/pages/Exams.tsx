@@ -112,7 +112,7 @@ export default function Exams() {
             <Button onClick={add}><Plus className="h-4 w-4 mr-1"/>Add exam</Button>
           </div>
         }/>
-      <Card className="overflow-x-auto card-pad">
+      <Card className="list-scroll-container overflow-x-auto card-pad">
         <table className="data-table">
           <thead><tr><th>Name</th><th>Term</th><th>Year</th><th>Out of</th><th>Status</th><th></th></tr></thead>
           <tbody>

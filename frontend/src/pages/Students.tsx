@@ -291,7 +291,7 @@ export default function Students() {
         <Badge variant="secondary" className="ml-auto self-center">{students.length} students</Badge>
       </div>
 
-      <Card className="overflow-x-auto card-pad">
+      <Card className="list-scroll-container overflow-x-auto card-pad">
         <table className="data-table">
           <thead>
             <tr>

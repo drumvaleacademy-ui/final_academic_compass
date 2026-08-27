@@ -18,7 +18,7 @@ export default function Marks() {
   return (
     <div>
       <PageHeader title="Exam Marks" description="View and manage exam marks." />
-      <Card className="overflow-x-auto">
+      <Card className="list-scroll-container overflow-x-auto">
         <table className="data-table min-w-[720px]"><thead><tr><th>Student</th><th>Subject</th><th>Exam</th><th>Score</th><th>Status</th></tr></thead>
           <tbody>{rows.length ? rows.map((row) => <tr key={row.id}><td>{row.student}</td><td>{row.subject}</td><td>{row.exam}</td><td className="font-semibold">{row.score ?? "Not entered"}</td><td>{row.pending ? <Badge variant="outline">Pending sync</Badge> : <Badge>Saved</Badge>}</td></tr>) : <tr><td colSpan={5} className="py-12 text-center text-muted-foreground">No marks entered for this curriculum yet. Enter results from Mark Entry.</td></tr>}</tbody>
         </table>

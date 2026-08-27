@@ -139,7 +139,7 @@ export default function Timetable() {
         </div>
       </Card>
 
-      <Card className="overflow-x-auto">
+      <Card className="list-scroll-container overflow-x-auto">
         <table className="data-table min-w-[720px]">
           <thead>
             <tr>

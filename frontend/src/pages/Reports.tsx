@@ -116,8 +116,32 @@ export default function Reports() {
 
   const exportReports = async () => {
     if (!selectedStudent || !selectedExam || !reportRef.current) { toast.error("Select a learner with an exam before exporting."); return; }
+    const source = reportRef.current;
+    const exportNode = source.cloneNode(true) as HTMLDivElement;
+    exportNode.style.width = "794px";
+    exportNode.style.backgroundColor = "#ffffff";
+    exportNode.style.position = "fixed";
+    exportNode.style.left = "-10000px";
+    exportNode.style.top = "0";
+    exportNode.style.color = "#111827";
+    document.body.appendChild(exportNode);
     try {
-      const canvas = await html2canvas(reportRef.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+      exportNode.querySelectorAll("style").forEach((style) => style.remove());
+      const sourceElements = [source, ...Array.from(source.querySelectorAll("*"))];
+      const exportElements = [exportNode, ...Array.from(exportNode.querySelectorAll("*"))];
+      const colorProperties = ["color", "background-color", "background-image", "border-color", "fill", "stroke", "box-shadow", "text-shadow"];
+      exportElements.forEach((element, index) => {
+        const sourceElement = sourceElements[index];
+        if (!sourceElement) return;
+        const computed = window.getComputedStyle(sourceElement);
+        colorProperties.forEach((property) => {
+          const value = computed.getPropertyValue(property);
+          if (!value) return;
+          const fallback = /background-color/.test(property) ? "#ffffff" : /background-image|box-shadow|text-shadow/.test(property) ? "none" : "#111827";
+          element instanceof HTMLElement && element.style.setProperty(property, /okl(?:ab|ch)/i.test(value) ? fallback : value);
+        });
+      });
+      const canvas = await html2canvas(exportNode, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false });
       const pdf = new jsPDF("p", "mm", "a4");
       const width = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
@@ -133,6 +157,8 @@ export default function Reports() {
       toast.success("Report PDF exported");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not export this report as PDF.");
+    } finally {
+      exportNode.remove();
     }
   };
 
@@ -183,6 +209,8 @@ export default function Reports() {
         }
       />
 
+      {selectedStudent && selectedExam && <div ref={reportRef} className="report-preview bg-background p-2"><ReportCardPreview schoolName={state.settings.schoolName} studentId={selectedStudent.id} studentName={selectedStudent.name} admissionNumber={selectedStudent.admissionNo} className={reportClass?.name} stream={reportStream?.name} term={`Term ${selectedExam.term}`} year={selectedExam.year} subjects={reportCardSubjects} teacherName="" principalName={state.settings.principalName} /></div>}
+
       <Card className="p-4 space-y-4">
         <div className="flex flex-wrap gap-2 items-center">
           <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Search</label><input className="inline-edit min-w-[220px]" placeholder="Learner, teacher, class..." value={search} onChange={(event) => setSearch(event.target.value)} /></div>
@@ -192,12 +220,10 @@ export default function Reports() {
           </Select></div>
           <Badge variant="outline">{reportRows.length} result{reportRows.length === 1 ? "" : "s"}</Badge>
         </div>
-        <div className="overflow-x-auto border rounded-md">
+        <div className="list-scroll-container overflow-x-auto border rounded-md">
           <table className="data-table min-w-[980px]"><thead><tr><th>Learner</th><th>Teacher</th><th>Class</th><th>Subject</th><th>Exam</th><th>Score</th><th>Status</th></tr></thead><tbody>{reportRows.length ? reportRows.map((row) => <tr key={row.id} className="cursor-pointer hover:bg-muted/40" onClick={() => row.studentId && setStudentId(row.studentId)}><td><button type="button" className="text-left"><div className="font-medium text-primary">{row.learner}</div><div className="text-xs text-muted-foreground">{row.admission}</div></button></td><td>{row.teacher}</td><td>{row.className} {row.stream && `· ${row.stream}`}</td><td>{row.subject}</td><td>{row.exam}</td><td className="font-semibold">{row.score ?? "Not entered"}</td><td>{row.pending ? <Badge variant="outline">Pending</Badge> : <Badge>Saved</Badge>}</td></tr>) : <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">No report results exist yet. Enter marks to generate reports for each learner.</td></tr>}</tbody></table>
         </div>
       </Card>
-
-      {selectedStudent && selectedExam && <div ref={reportRef} className="bg-background p-2"><ReportCardPreview schoolName={state.settings.schoolName} studentId={selectedStudent.id} studentName={selectedStudent.name} admissionNumber={selectedStudent.admissionNo} className={reportClass?.name} stream={reportStream?.name} term={`Term ${selectedExam.term}`} year={selectedExam.year} subjects={reportCardSubjects} teacherName="" principalName={state.settings.principalName} /></div>}
 
     </div>
   );

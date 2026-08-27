@@ -258,6 +258,16 @@
   .data-table {
     @apply w-full text-sm;
   }
+  .list-scroll-container {
+    max-height: min(68vh, 720px);
+    overflow: auto;
+  }
+  .list-scroll-container thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: hsl(var(--card));
+  }
   .data-table th {
     @apply text-left text-xs font-medium text-muted-foreground pb-2 pr-3 whitespace-nowrap;
   }

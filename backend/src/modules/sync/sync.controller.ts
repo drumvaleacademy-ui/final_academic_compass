@@ -33,4 +33,11 @@ export class SyncController {
   async deleteEntity(@Request() req: any, @Param("entity") entity: string, @Param("id") id: string) {
     return this.syncService.deleteEntity(req.user.schoolId, entity, id);
   }
+
+  @Post("students")
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async addStudents(@Request() req: any, @Body() payload: any) {
+    return this.syncService.addStudents(req.user.schoolId, payload?.students ?? []);
+  }
 }

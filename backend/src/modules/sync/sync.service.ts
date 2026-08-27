@@ -174,6 +174,23 @@ export class SyncService {
     return { ok: true };
   }
 
+  async addStudents(schoolId: string, students: any[]) {
+    const db: any = this.prisma;
+    const rows = Array.isArray(students) ? students.filter((item) => item?.id && item?.classId && item?.streamId) : [];
+    if (!rows.length) return { ok: true, count: 0 };
+    const validClasses = new Set((await db.class.findMany({ where: { schoolId }, select: { id: true } })).map((item: any) => item.id));
+    const validStreams = new Set((await db.stream.findMany({ where: { class: { schoolId } }, select: { id: true, classId: true } })).map((item: any) => `${item.id}:${item.classId}`));
+    const safeRows = rows.filter((item) => validClasses.has(item.classId) && validStreams.has(`${item.streamId}:${item.classId}`));
+    await db.student.createMany({
+      data: safeRows.map((item) => ({
+        id: String(item.id), schoolId, admissionNo: String(item.admissionNo ?? ""), fullName: String(item.name ?? "New Student"),
+        gender: item.gender === "F" ? "F" : "M", classId: item.classId, streamId: item.streamId,
+      })),
+      skipDuplicates: true,
+    });
+    return { ok: true, count: safeRows.length };
+  }
+
   private mergeSnapshots(remote: any, local: any): any {
     if (!remote) return local;
     if (!local) return remote;

@@ -367,39 +367,9 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
         const res = await pushSchoolSnapshot(snap);
         if (res === "ok") {
           localChangesRef.current = false;
-          // After a successful push, fetch authoritative snapshot from server
-          try {
-            const server = await fetchSchoolSnapshot();
-            if (server) {
-              cacheSnapshot(session?.user.id, server);
-              setState(prev => ({
-                ...prev,
-                students: server.students ?? prev.students,
-                teachers: server.teachers ?? prev.teachers,
-                classes: server.classes ?? prev.classes,
-                streams: server.streams ?? prev.streams,
-                subjects: server.subjects ?? prev.subjects,
-                exams: server.exams ?? prev.exams,
-                sheets: server.sheets ?? prev.sheets,
-                entries: server.entries ?? prev.entries,
-                timetable: server.timetable ?? prev.timetable,
-                curricula: server.curricula ?? prev.curricula,
-                settings: server.settings ?? prev.settings,
-                deletedIds: server.deletedIds ?? prev.deletedIds,
-                lastSyncAt: new Date().toISOString(),
-              }));
-              toast.success("Details saved and refreshed from server");
-            } else {
-              setState(prev => ({ ...prev, lastSyncAt: new Date().toISOString() }));
-              toast.success("Details saved");
-            }
-          } catch (err) {
-            // If fetching snapshot failed, still mark saved and inform user
-            setState(prev => ({ ...prev, lastSyncAt: new Date().toISOString() }));
-            const message = err instanceof Error ? err.message : "Saved but failed to refresh from server";
+            cacheSnapshot(session?.user.id, snap);
+            setState(prev => ({ ...prev, lastSyncAt: new Date().toISOString(), syncQueue: [] }));
             toast.success("Details saved");
-            toast.error(message);
-          }
         } else {
           toast.error("Failed to save details. Check your connection and sign-in status.");
         }

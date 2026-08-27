@@ -7,7 +7,6 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
-import { pushSchoolSnapshot } from "@/lib/syncService";
 import * as XLSX from "xlsx";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -74,12 +73,22 @@ export default function Classes() {
       if (!rawRows.length) throw new Error("The uploaded file is empty.");
       const first = rawRows[0].map((cell: any) => String(cell).trim().toLowerCase());
       const hasHeader = first.some(cell => /admission|adm|student|learner|pupil|name/.test(cell));
-      const admissionIndex = hasHeader ? first.findIndex(cell => /admission|adm|student\s*(id|no|number)|learner\s*(id|no|number)|pupil\s*(id|no|number)/.test(cell)) : 0;
-      const nameIndex = hasHeader ? first.findIndex(cell => /^(full\s*)?(student\s*)?name$|learner\s*name|pupil\s*name/.test(cell)) : 1;
-      const rows = rawRows.slice(hasHeader ? 1 : 0).map(row => ({
-        admissionNo: String(row[admissionIndex >= 0 ? admissionIndex : 0] ?? "").trim(),
-        name: String(row[nameIndex >= 0 ? nameIndex : 1] ?? "").trim(),
-      })).filter(row => row.admissionNo || row.name);
+      const admissionIndex = hasHeader ? first.findIndex(cell => /admission|adm|student\s*(id|no|number)|learner\s*(id|no|number)|pupil\s*(id|no|number)/.test(cell)) : -1;
+      const nameIndex = hasHeader ? first.findIndex(cell => /^(full\s*)?(student\s*)?name(s)?$|learner\s*name(s)?|pupil\s*name(s)?/.test(cell)) : -1;
+      const rows = rawRows.slice(hasHeader ? 1 : 0).flatMap(row => {
+        const cells = Array.isArray(row) ? row.map(cell => String(cell ?? "").trim()).filter(Boolean) : [];
+        if (hasHeader) return [{ admissionNo: String(row[admissionIndex >= 0 ? admissionIndex : 0] ?? "").trim(), name: String(row[nameIndex >= 0 ? nameIndex : 1] ?? "").trim() }];
+        if (cells.length >= 2) {
+          const firstIsAdmission = /^(?:\d{2}[A-Za-z]{2,4}\d{3}|\d{3,})$/.test(cells[0]);
+          return [firstIsAdmission ? { admissionNo: cells[0], name: cells[1] } : { admissionNo: cells[1], name: cells[0] }];
+        }
+        const text = cells[0] ?? "";
+        const markers = [...text.matchAll(/\b(?:\d{2}[A-Za-z]{2,4}\d{3}|\d{3,})\b/g)];
+        return markers.map((marker, index) => ({
+          admissionNo: marker[0],
+          name: text.slice(marker.index! + marker[0].length, markers[index + 1]?.index ?? text.length).trim().replace(/[;,|]+$/, "").trim(),
+        }));
+      }).filter(row => row.admissionNo || row.name);
       if (!rows.length) throw new Error("No student names or admission numbers were found.");
       setExtractRows(rows);
     } catch (err: unknown) {
@@ -116,14 +125,8 @@ export default function Classes() {
       setExtracting(false);
       return;
     }
-    const snapshot = {
-      students: [...state.students, ...imported], teachers: state.teachers, classes: state.classes,
-      streams: state.streams, subjects: state.subjects, exams: state.exams, sheets: state.sheets,
-      entries: state.entries, timetable: state.timetable, curricula: state.curricula, settings: state.settings,
-      classRemarks: [], principalRemarks: [], deletedIds: state.deletedIds,
-    };
     try {
-      await pushSchoolSnapshot(snapshot);
+      await api.post("/v2/sync/students", { students: imported });
       update(s => { s.students.push(...imported); }, { markDirty: false });
       toast.success(`${imported.length} student${imported.length === 1 ? "" : "s"} extracted and saved to ${target.label}.`);
       setExtractRows(null);

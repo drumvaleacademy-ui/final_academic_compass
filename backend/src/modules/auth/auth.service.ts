@@ -430,12 +430,28 @@ export class AuthService {
     department?: string;
     password?: string;
   }, createdBy: string) {
+    const email = input.email.trim().toLowerCase();
+    const role = input.role ?? "TEACHER";
     const existing = await this.prisma.$queryRaw<Array<{ id: string }>>`
-      SELECT "id" FROM "users" WHERE "email" = ${input.email} LIMIT 1
+      SELECT "id" FROM "users" WHERE LOWER(TRIM("email")) = ${email} LIMIT 1
     `;
 
     if (existing[0]) {
       throw new ConflictException("Email already registered");
+    }
+
+    if (role === "PRINCIPAL" || role === "SENIOR_TEACHER") {
+      const count = await this.prisma.$queryRaw<Array<{ count: number }>>`
+        SELECT COUNT(*)::int AS "count" FROM "users" u
+        JOIN "user_roles" ur ON ur."userId" = u."id"
+        WHERE u."schoolId" = ${schoolId} AND ur."role" = ${role}::"Role"
+      `;
+      const limit = role === "PRINCIPAL" ? 1 : 2;
+      if (Number(count[0]?.count ?? 0) >= limit) {
+        throw new ConflictException(role === "PRINCIPAL"
+          ? "Only one principal can exist in this school"
+          : "A maximum of two senior teachers can exist in this school");
+      }
     }
 
     const schools = await this.prisma.$queryRaw<Array<{ id: string; name: string; emailDomains: string[] | null }>>`
@@ -449,7 +465,7 @@ export class AuthService {
 
     const allowedDomains = school.emailDomains ?? [];
     if (allowedDomains && allowedDomains.length > 0) {
-      const domain = input.email.split("@")[1]?.toLowerCase();
+      const domain = email.split("@")[1]?.toLowerCase();
       if (!domain || !allowedDomains.some((d: string) => d.toLowerCase() === domain)) {
         throw new BadRequestException("Email domain not allowed for teacher registration");
       }
@@ -462,7 +478,7 @@ export class AuthService {
 
     if (supabaseAdmin) {
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: input.email,
+        email,
         password: tempPassword,
         email_confirm: false,
       });
@@ -476,10 +492,9 @@ export class AuthService {
       userId = randomUUID();
     }
 
-    const role = input.role ?? "TEACHER";
     await this.prisma.$executeRaw`
       INSERT INTO "users" ("id", "email", "fullName", "passwordHash", "phoneNumber", "isActive", "activatedAt", "schoolId")
-      VALUES (${userId}, ${input.email}, ${input.fullName}, ${passwordHash}, ${input.department ?? null}, true, NOW(), ${schoolId})
+      VALUES (${userId}, ${email}, ${input.fullName}, ${passwordHash}, ${input.department ?? null}, true, NOW(), ${schoolId})
     `;
     await this.prisma.$executeRaw`
       INSERT INTO "user_roles" ("id", "userId", "role")
@@ -500,7 +515,7 @@ export class AuthService {
     const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
 
     await this.emailService.sendWelcomeEmail({
-      to: input.email,
+      to: email,
       fullName: input.fullName,
       schoolName: school.name,
       loginUrl: `${frontendUrl}/auth`,
@@ -509,10 +524,11 @@ export class AuthService {
 
     return {
       id: userId,
-      email: input.email,
+      email,
       fullName: input.fullName,
       roles: [role],
       tempPassword,
+      temp_password: tempPassword,
       activationToken,
     };
   }
@@ -602,6 +618,19 @@ export class AuthService {
     }
 
     if (action === "add") {
+      if (role === "PRINCIPAL" || role === "SENIOR_TEACHER") {
+        const count = await this.prisma.$queryRaw<Array<{ count: number }>>`
+          SELECT COUNT(*)::int AS "count" FROM "users" u
+          JOIN "user_roles" ur ON ur."userId" = u."id"
+          WHERE u."schoolId" = ${schoolId} AND ur."role" = ${role}::"Role"
+        `;
+        const limit = role === "PRINCIPAL" ? 1 : 2;
+        if (Number(count[0]?.count ?? 0) >= limit) {
+          throw new ConflictException(role === "PRINCIPAL"
+            ? "Only one principal can exist in this school"
+            : "A maximum of two senior teachers can exist in this school");
+        }
+      }
       await this.db.userRole.create({
         data: { userId, role: role as any },
       }).catch(() => {});

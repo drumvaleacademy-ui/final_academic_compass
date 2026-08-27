@@ -166,7 +166,7 @@ export default function Profile() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="My Profile" description="View your profile details and role assignments." />
+      <PageHeader title="My Profile" description="Your account identity, access status, and responsibilities in Academic Compass." />
 
       <div className="grid md:grid-cols-3 gap-4 md:gap-6">
         {/* User card */}
@@ -257,6 +257,13 @@ export default function Profile() {
             * Assignments are managed securely by the principal and platform administrators. If your status is incorrect, please contact your administrator.
           </div>
         </Card>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Account status</p><p className="mt-1 font-semibold flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-success" /> Active</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Assigned roles</p><p className="mt-1 text-xl font-semibold">{roles.length}</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">School</p><p className="mt-1 font-semibold truncate">{state.settings.schoolName}</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Academic year</p><p className="mt-1 text-xl font-semibold">{state.settings.academicYear}</p></Card>
       </div>
 
       {/* Principal admin panel */}

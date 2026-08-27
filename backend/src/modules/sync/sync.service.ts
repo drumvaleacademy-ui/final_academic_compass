@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../../core/prisma.service";
 
 const DEFAULT_CURRICULA = [
@@ -152,6 +152,22 @@ export class SyncService {
     });
 
     return { data: merged, updatedAt: now.toISOString() };
+  }
+
+  async deleteEntity(schoolId: string, entity: string, id: string) {
+    const db: any = this.prisma;
+    if (entity === "class") {
+      const item = await db.class.findFirst({ where: { id, schoolId } });
+      if (!item) return { ok: true };
+      await db.class.delete({ where: { id: item.id } });
+    } else if (entity === "stream") {
+      const item = await db.stream.findFirst({ where: { id, class: { schoolId } } });
+      if (!item) return { ok: true };
+      await db.stream.delete({ where: { id: item.id } });
+    } else {
+      throw new BadRequestException("Unsupported entity deletion");
+    }
+    return { ok: true };
   }
 
   private mergeSnapshots(remote: any, local: any): any {

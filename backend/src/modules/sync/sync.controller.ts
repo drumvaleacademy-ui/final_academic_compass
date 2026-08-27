@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Request, HttpCode, HttpStatus } from "@nestjs/common";
+import { Controller, Get, Post, Body, UseGuards, Request, HttpCode, HttpStatus, Delete, Param } from "@nestjs/common";
 import { SyncService } from "./sync.service";
 import { AuthGuard } from "../../core/guards/nestjs.guards";
 
@@ -26,5 +26,11 @@ export class SyncController {
       // Throw a NestJS error with the derived message so client can see details
       throw new (require('@nestjs/common').InternalServerErrorException)(msg);
     }
+  }
+
+  @Delete("entity/:entity/:id")
+  @UseGuards(AuthGuard)
+  async deleteEntity(@Request() req: any, @Param("entity") entity: string, @Param("id") id: string) {
+    return this.syncService.deleteEntity(req.user.schoolId, entity, id);
   }
 }

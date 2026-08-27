@@ -13,6 +13,10 @@ import { api } from "@/lib/api";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -47,6 +51,7 @@ export default function Teachers() {
   const [role, setRole] = useState<string>("TEACHER");
   const [password, setPassword] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [removeTarget, setRemoveTarget] = useState<BackendProfile | null>(null);
 
   const pendingProfiles = backendProfiles.filter(p => !p.approved);
   const filteredProfiles = backendProfiles.filter(p => {
@@ -79,6 +84,12 @@ export default function Teachers() {
   const add = async () => {
     if (!isPrincipal) { toast.error("Only the Principal can manage the staff directory"); return; }
     try {
+      if (role === "PRINCIPAL" && backendProfiles.some(p => p.roles.includes("PRINCIPAL"))) {
+        toast.error("Only one principal can exist in this school."); return;
+      }
+      if (role === "SENIOR_TEACHER" && backendProfiles.filter(p => p.roles.includes("SENIOR_TEACHER")).length >= 2) {
+        toast.error("A maximum of two senior teachers can exist in this school."); return;
+      }
       const res = await api.post<{ id: string; email: string; full_name: string | null; department: string | null; roles: string[]; temp_password: string }>("/v2/auth/teachers", {
         email: email || `new.teacher.${Date.now()}@school.ac.ke`,
         fullName: name || "New Teacher",
@@ -100,12 +111,18 @@ export default function Teachers() {
     if (!isPrincipal) { toast.error("Only the Principal can manage the staff directory"); return; }
     try {
       await api.delete(`/v2/auth/profiles/${id}`);
-      toast.success("Staff member removed.");
+      toast.success("Staff member permanently removed.");
       setBackendProfiles(prev => prev.filter(p => p.id !== id));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to remove staff member.";
       toast.error(msg);
     }
+  };
+
+  const confirmRemove = async () => {
+    if (!removeTarget) return;
+    await remove(removeTarget.id);
+    setRemoveTarget(null);
   };
 
   const exportTeachers = () => {
@@ -178,6 +195,12 @@ export default function Teachers() {
 
   const handleRoleToggle = async (userId: string, targetRole: string, hasRole: boolean) => {
     const action = hasRole ? "remove" : "add";
+    if (action === "add" && targetRole === "PRINCIPAL" && backendProfiles.some(p => p.roles.includes("PRINCIPAL"))) {
+      toast.error("Only one principal can exist in this school."); return;
+    }
+    if (action === "add" && targetRole === "SENIOR_TEACHER" && backendProfiles.filter(p => p.roles.includes("SENIOR_TEACHER")).length >= 2) {
+      toast.error("A maximum of two senior teachers can exist in this school."); return;
+    }
     try {
       await api.post("/v2/auth/assign-role", { userId, role: targetRole, action });
       toast.success("Role assignment updated successfully.");
@@ -284,10 +307,33 @@ export default function Teachers() {
               />
             </div>
           </div>
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="rounded-md border bg-muted/30 px-3 py-2"><span className="text-muted-foreground">Registered</span><strong className="block text-base">{backendProfiles.length}</strong></div>
+            <div className="rounded-md border bg-muted/30 px-3 py-2"><span className="text-muted-foreground">Principal</span><strong className="block text-base">{backendProfiles.filter(p => p.roles.includes("PRINCIPAL")).length} / 1</strong></div>
+            <div className="rounded-md border bg-muted/30 px-3 py-2"><span className="text-muted-foreground">Senior teachers</span><strong className="block text-base">{backendProfiles.filter(p => p.roles.includes("SENIOR_TEACHER")).length} / 2</strong></div>
+          </div>
           <p className="text-xs text-muted-foreground">
             View all staff who have registered accounts. Approve access and assign roles.
           </p>
-          <div className="overflow-x-auto border border-border rounded-lg min-w-[640px]">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {loadingProfiles ? (
+              <div className="md:col-span-2 xl:col-span-3 py-10 text-center text-muted-foreground">Loading registered staff...</div>
+            ) : filteredProfiles.length === 0 ? (
+              <div className="md:col-span-2 xl:col-span-3 py-10 text-center text-muted-foreground">No staff match your search.</div>
+            ) : filteredProfiles.map((p) => {
+              const isPrincipalRow = p.roles.some(role => ["PLATFORM_ADMIN", "PRINCIPAL", "admin", "principal"].includes(role));
+              return <Card key={p.id} className="p-4 space-y-4 border-border/80">
+                <div className="flex items-start gap-3">
+                  <div className="h-11 w-11 shrink-0 rounded-full bg-primary/10 text-primary grid place-items-center font-semibold text-lg">{(p.full_name || p.email).charAt(0).toUpperCase()}</div>
+                  <div className="min-w-0 flex-1"><h4 className="font-semibold truncate">{p.full_name || "Unnamed"}</h4><p className="text-xs text-muted-foreground truncate">{p.email}</p><p className="text-xs text-muted-foreground mt-1">{p.department || "No department"}</p></div>
+                  <Badge variant={p.approved ? "secondary" : "outline"}>{p.approved ? "Approved" : "Pending"}</Badge>
+                </div>
+                <div className="flex flex-wrap gap-1.5">{p.roles.length ? p.roles.map(r => <Badge key={r} variant="outline" className="text-[10px]">{ALL_ROLES.find(x => x.value === r)?.label || r}</Badge>) : <span className="text-xs text-muted-foreground">No roles assigned</span>}</div>
+                <div className="flex items-center justify-between border-t pt-3"><span className="text-xs text-muted-foreground">Registered {new Date(p.created_at).toLocaleDateString()}</span>{isPrincipal && !isPrincipalRow && <Button variant="ghost" size="icon" aria-label={`Delete ${p.full_name || p.email}`} onClick={() => setRemoveTarget(p)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}</div>
+              </Card>;
+            })}
+          </div>
+          <div className="hidden overflow-x-auto border border-border rounded-lg min-w-[640px]">
             <table className="w-full text-sm text-left">
               <thead className="bg-muted text-muted-foreground text-xs uppercase font-medium border-b border-border">
                 <tr>
@@ -351,6 +397,12 @@ export default function Teachers() {
           </div>
         </Card>
       }
+      <AlertDialog open={removeTarget !== null} onOpenChange={(open) => { if (!open) setRemoveTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Remove staff member?</AlertDialogTitle><AlertDialogDescription>This permanently deletes {removeTarget?.full_name || removeTarget?.email} and their login from the database. This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={confirmRemove}>Delete permanently</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

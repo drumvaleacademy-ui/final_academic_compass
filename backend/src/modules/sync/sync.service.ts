@@ -164,6 +164,10 @@ export class SyncService {
       const item = await db.stream.findFirst({ where: { id, class: { schoolId } } });
       if (!item) return { ok: true };
       await db.stream.delete({ where: { id: item.id } });
+    } else if (entity === "student") {
+      const item = await db.student.findFirst({ where: { id, schoolId } });
+      if (!item) return { ok: true };
+      await db.student.delete({ where: { id: item.id } });
     } else {
       throw new BadRequestException("Unsupported entity deletion");
     }

@@ -16,6 +16,11 @@ import mammoth from "mammoth";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { api } from "@/lib/api";
 
 GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
 
@@ -30,6 +35,7 @@ export default function Students() {
   const [streamFilter, setStreamFilter] = useState<string>("all");
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<{ admissionNo: string; name: string }[] | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; admissionNo: string } | null>(null);
   const classes = state.classes.filter(c => c.curriculumId === activeCurriculum);
   const streams = state.streams.filter(s => classFilter === "all" || s.classId === classFilter);
   const students = state.students.filter(s => s.curriculumId === activeCurriculum)
@@ -53,9 +59,19 @@ export default function Students() {
     toast.success("Student added — edit their details inline");
   };
 
-  const removeStudent = (id: string) => {
+  const removeStudent = async () => {
+    if (!deleteTarget) return;
     if (!canManageStudents) { toast.error("Only the Principal or Senior Teacher can remove learners"); return; }
-    update(st => { st.students = st.students.filter(x => x.id !== id); st.deletedIds = [...(st.deletedIds ?? []), id]; });
+    const target = deleteTarget;
+    try {
+      await api.delete(`/v2/sync/entity/student/${encodeURIComponent(target.id)}`);
+      update(st => { st.students = st.students.filter(x => x.id !== target.id); st.deletedIds = (st.deletedIds ?? []).filter(id => id !== target.id); }, { markDirty: false });
+      toast.success("Student permanently deleted from the database.");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Could not delete student.");
+    } finally {
+      setDeleteTarget(null);
+    }
   };
 
   const exportStudents = () => {
@@ -130,12 +146,12 @@ export default function Students() {
     if (!rawRows.length) return [];
 
     const firstRow = rawRows[0];
-    const isHeader = Array.isArray(firstRow) && firstRow.some((cell) => typeof cell === "string" && isNaN(Number(cell)));
+    const isHeader = Array.isArray(firstRow) && firstRow.some((cell) => /admission|adm|student\s*(id|no|number|name|names)|learner\s*(id|no|number|name|names)|pupil\s*(id|no|number|name|names)|full\s*name|^name$/.test(String(cell ?? "").trim().toLowerCase()));
 
     if (isHeader) {
       const header = firstRow.map((cell: any) => String(cell ?? "").trim().toLowerCase());
       const admissionIdx = header.findIndex((h) => /admission|adm|student\s*id|learner\s*id|pupil\s*id/.test(h));
-      const nameIdx = header.findIndex((h) => /^name|full\s*name|student\s*name|learner\s*name|pupil\s*name/.test(h));
+      const nameIdx = header.findIndex((h) => /^(full\s*)?name(s)?$|student\s*name(s)?|learner\s*name(s)?|pupil\s*name(s)?/.test(h));
       return rawRows.slice(1).map((row: any) => {
         const cells = Array.isArray(row) ? row : [];
         return {
@@ -147,9 +163,13 @@ export default function Students() {
 
     return rawRows.map((row) => {
       const cells = Array.isArray(row) ? row : [];
-      const admissionNo = String(cells[0] ?? "").trim();
-      const studentName = String(cells[1] ?? "").trim();
-      return { admissionNo, name: studentName };
+      const first = String(cells[0] ?? "").trim();
+      const second = String(cells[1] ?? "").trim();
+      const firstLooksLikeName = NAME_PATTERN.test(first);
+      const secondLooksLikeName = NAME_PATTERN.test(second);
+      return firstLooksLikeName && !secondLooksLikeName
+        ? { admissionNo: second, name: first }
+        : { admissionNo: first, name: second };
     });
   };
 
@@ -306,7 +326,7 @@ export default function Students() {
                   </td>
                   {canManageStudents && (
                     <td>
-                      <Button size="icon" variant="ghost" onClick={() => removeStudent(s.id)}>
+                      <Button size="icon" variant="ghost" aria-label={`Delete ${s.name}`} onClick={() => setDeleteTarget({ id: s.id, name: s.name, admissionNo: s.admissionNo })}>
                         <Trash2 className="h-4 w-4 text-destructive"/>
                       </Button>
                     </td>
@@ -353,6 +373,16 @@ export default function Students() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete student permanently?</AlertDialogTitle>
+            <AlertDialogDescription>This will permanently remove <strong>{deleteTarget?.name}</strong> ({deleteTarget?.admissionNo}) from the database. This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={removeStudent}>Delete permanently</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

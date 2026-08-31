@@ -262,11 +262,11 @@ export default function Reports() {
               <SelectTrigger className="w-52"><SelectValue placeholder="Select learner" /></SelectTrigger>
               <SelectContent>{state.students.map((student) => <SelectItem key={student.id} value={student.id}>{student.name}</SelectItem>)}</SelectContent>
             </Select></div>
-            <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Class</label><Select value={classFilter || "all"} onValueChange={(value) => setClassFilter(value === "all" ? "" : value)}>
+            <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Class</label><Select value={classFilter || "all"} onValueChange={(value) => { setClassFilter(value === "all" ? "" : value); setStudentId(""); setPreviewOpen(false); }}>
               <SelectTrigger className="w-44"><SelectValue placeholder="All classes" /></SelectTrigger>
               <SelectContent><SelectItem value="all">All classes</SelectItem>{classes.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent>
             </Select></div>
-            <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Exam</label><Select value={examId || "all"} onValueChange={(value) => setExamId(value === "all" ? "" : value)}>
+            <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Exam</label><Select value={examId || "all"} onValueChange={(value) => { setExamId(value === "all" ? "" : value); setStudentId(""); setPreviewOpen(false); }}>
               <SelectTrigger className="w-44"><SelectValue placeholder="All exams" /></SelectTrigger>
               <SelectContent><SelectItem value="all">All exams</SelectItem>{exams.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent>
             </Select></div>

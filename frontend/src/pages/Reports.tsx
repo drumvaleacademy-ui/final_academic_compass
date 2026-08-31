@@ -206,12 +206,15 @@ export default function Reports() {
       const canvas = await html2canvas(exportNode, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false });
       const pdf = new jsPDF("p", "mm", "a4");
       const width = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
+      const pageHeight = pdf.internal.pageSize.getHeight() - 14;
       const renderedHeight = (canvas.height * width) / canvas.width;
       const image = canvas.toDataURL("image/png");
-      for (let offset = 0; offset < renderedHeight; offset += pageHeight) {
-        if (offset > 0) pdf.addPage();
-        pdf.addImage(image, "PNG", 0, -offset, width, renderedHeight, undefined, "FAST");
+
+      const totalPages = Math.ceil(renderedHeight / pageHeight);
+      for (let page = 0; page < totalPages; page++) {
+        if (page > 0) pdf.addPage();
+        const offset = page * pageHeight;
+        pdf.addImage(image, "PNG", 0, -(offset), width, renderedHeight + 12, undefined, "FAST");
       }
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
       const safe = (value: string) => value.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "");

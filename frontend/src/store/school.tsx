@@ -255,6 +255,11 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     try { localStorage.setItem(`ac_school_snapshot_${userId}`, JSON.stringify(snapshot)); } catch (_e) {}
   };
 
+  useEffect(() => {
+    if (!session?.user.id || typeof window === "undefined") return;
+    cacheSnapshot(session.user.id, state);
+  }, [session?.user.id, state]);
+
   const update = useCallback((fn: (s: SchoolState) => void, options?: { markDirty?: boolean }) => {
     if (options?.markDirty !== false) localChangesRef.current = true;
     setState((prev) => {

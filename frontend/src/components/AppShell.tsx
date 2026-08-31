@@ -379,7 +379,7 @@ export default function AppShell() {
               ))}
             </nav>
             <div className="text-xs text-muted-foreground">
-              {new Date().getFullYear()} Academic Compass. All rights reserved.
+              Made by Greenville IT Solutions. 2026.
             </div>
           </div>
         </div>

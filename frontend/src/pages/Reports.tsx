@@ -14,7 +14,7 @@ import { useSearchParams } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import { getCurriculumGradeScale, gradeFor as gradeForScore } from "@/lib/schoolData";
+import { getCurriculumGradeScale, gradeFor } from "@/lib/schoolData";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -57,7 +57,7 @@ const GRADE_BANDS = [
   { min: 0, grade: "F", description: "Fail" },
 ] as const;
 
-function gradeFor(percentage: number, curriculumId?: string): string {
+function gradeString(percentage: number, curriculumId?: string): string {
   const scale = getCurriculumGradeScale(curriculumId ?? "cbc");
   const band = scale.find((b) => percentage >= b.min && percentage <= b.max);
   return band ? band.grade : (scale[scale.length - 1]?.grade ?? "F");
@@ -164,7 +164,7 @@ export default function Reports() {
       const sheet = state.sheets.find((item) => item.examId === selectedExam.id && item.subjectId === subject.id && item.classId === selectedStudent.classId);
       const entry = sheet ? state.entries.find((item) => item.sheetId === sheet.id && item.studentId === selectedStudent.id) : undefined;
       const score = entry?.score ?? null;
-      const gradeBand = score == null ? null : gradeForScore(score, getCurriculumGradeScale(selectedExam?.curriculumId ?? reportCurriculum?.id ?? "cbc"));
+      const gradeBand = score == null ? null : gradeFor(score, getCurriculumGradeScale(selectedExam?.curriculumId ?? reportCurriculum?.id ?? "cbc"));
       return { name: subject.name, code: subject.code, cat1: null, cat2: null, exam: score, total: score ?? 0, grade: gradeBand?.grade ?? "-", teacherComment: sheet?.teacherComment };
     }).filter((subject) => subject.exam !== null);
   }, [selectedStudent, selectedExam, reportCurriculum, state]);
@@ -318,7 +318,7 @@ function ReportCardPreview(props: ReportCardProps) {
   const totalPossible = (props.subjects || []).filter((s) => s.grade !== "-").length * maxTotal;
   const percentage = totalPossible > 0 ? Math.round((totalObtained / totalPossible) * 100) : 0;
   const gradeScale = getCurriculumGradeScale(props.curriculumId ?? "cbc");
-  const overallGradeBand = gradeForScore(percentage, gradeScale);
+  const overallGradeBand = gradeFor(percentage, gradeScale);
   const overallGrade = overallGradeBand?.grade ?? "N/A";
 
   const gradeDescriptions: Record<string, string> = {

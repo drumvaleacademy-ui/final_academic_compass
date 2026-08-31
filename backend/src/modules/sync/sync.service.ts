@@ -16,16 +16,14 @@ export class SyncService {
     const school = await db.school.findUnique({ where: { id: schoolId }, include: { settings: true } });
     if (!school) return { data: null, updatedAt: null };
 
-    const [classes, subjects, students, exams, sheets, entries, timetable, users] = await Promise.all([
-      db.class.findMany({ where: { schoolId }, include: { streams: true } }),
-      db.subject.findMany({ where: { schoolId } }),
-      db.student.findMany({ where: { schoolId }, include: { class: true } }),
-      db.exam.findMany({ where: { schoolId }, include: { term: true } }),
-      db.markSheet.findMany({ where: { class: { schoolId } } }),
-      db.markEntry.findMany({ where: { sheet: { class: { schoolId } } } }),
-      db.timetableSlot.findMany({ where: { schoolId }, include: { class: true } }),
-      db.user.findMany({ where: { schoolId }, include: { roles: true } }),
-    ]);
+    const classes = await db.class.findMany({ where: { schoolId }, include: { streams: true } });
+    const subjects = await db.subject.findMany({ where: { schoolId } });
+    const students = await db.student.findMany({ where: { schoolId }, include: { class: true } });
+    const exams = await db.exam.findMany({ where: { schoolId }, include: { term: true } });
+    const sheets = await db.markSheet.findMany({ where: { class: { schoolId } } });
+    const entries = await db.markEntry.findMany({ where: { sheet: { class: { schoolId } } } });
+    const timetable = await db.timetableSlot.findMany({ where: { schoolId }, include: { class: true } });
+    const users = await db.user.findMany({ where: { schoolId }, include: { roles: true } });
     const settings = school.settings;
     return {
       data: {

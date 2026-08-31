@@ -8,7 +8,11 @@ function prismaDatabaseUrl() {
     const url = new URL(rawUrl);
     if (url.port !== "6543") return rawUrl;
     if (!url.searchParams.has("pgbouncer")) url.searchParams.set("pgbouncer", "true");
-    if (!url.searchParams.has("connection_limit")) url.searchParams.set("connection_limit", "1");
+
+    const configuredLimit = Number(url.searchParams.get("connection_limit") ?? process.env.PRISMA_CONNECTION_LIMIT ?? "10");
+    const safeLimit = Number.isFinite(configuredLimit) && configuredLimit > 1 ? configuredLimit : 10;
+    url.searchParams.set("connection_limit", String(safeLimit));
+    url.searchParams.set("pool_timeout", "20");
     return url.toString();
   } catch {
     return rawUrl;

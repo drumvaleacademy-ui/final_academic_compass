@@ -275,8 +275,17 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     update,
     setMarkScore: () => {},
     syncNow: async () => {
-      // simple sync: push full snapshot for now
+      // Smart sync: only send queued entries to reduce payload size
       try {
+        // Get only entries that are queued for sync
+        const queuedEntryIds = new Set(state.syncQueue);
+        const queuedEntries = state.entries.filter(e => queuedEntryIds.has(e.id));
+        
+        // Get sheets that have queued entries
+        const queuedSheetIds = new Set(queuedEntries.map(e => e.sheetId));
+        const queuedSheets = state.sheets.filter(s => queuedSheetIds.has(s.id));
+        
+        // Build minimal sync payload with only changed data
         const snap = {
           students: state.students,
           teachers: state.teachers,
@@ -284,8 +293,8 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
           streams: state.streams,
           subjects: state.subjects,
           exams: state.exams,
-          sheets: state.sheets,
-          entries: state.entries,
+          sheets: queuedSheets.length > 0 ? queuedSheets : state.sheets,
+          entries: queuedEntries.length > 0 ? queuedEntries : state.entries,
           timetable: state.timetable,
           curricula: state.curricula,
           settings: state.settings,

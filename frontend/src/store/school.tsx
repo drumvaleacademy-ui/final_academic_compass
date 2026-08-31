@@ -281,6 +281,11 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
         const queuedEntryIds = new Set(state.syncQueue);
         const queuedEntries = state.entries.filter(e => queuedEntryIds.has(e.id));
         
+        if (queuedEntries.length === 0) {
+          toast.info("No changes to sync");
+          return;
+        }
+        
         // Get sheets that have queued entries
         const queuedSheetIds = new Set(queuedEntries.map(e => e.sheetId));
         const queuedSheets = state.sheets.filter(s => queuedSheetIds.has(s.id));
@@ -293,25 +298,28 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
           streams: state.streams,
           subjects: state.subjects,
           exams: state.exams,
-          sheets: queuedSheets.length > 0 ? queuedSheets : state.sheets,
-          entries: queuedEntries.length > 0 ? queuedEntries : state.entries,
-          timetable: state.timetable,
+          sheets: queuedSheets.length > 0 ? queuedSheets : [],
+          entries: queuedEntries,
+          timetable: [],
           curricula: state.curricula,
           settings: state.settings,
           classRemarks: [],
           principalRemarks: [],
           deletedIds: state.deletedIds,
         };
+        
+        console.log(`[Sync] Sending ${queuedEntries.length} entries with ${queuedSheets.length} sheets`);
         const res = await pushSchoolSnapshot(snap);
         if (res === "ok") {
           localChangesRef.current = false;
           setState(prev => ({ ...prev, lastSyncAt: new Date().toISOString(), syncQueue: [] }));
-          toast.success("Sync successful");
+          toast.success(`Sync successful (${queuedEntries.length} entries)`);
         } else {
           toast.error("Sync failed - please try again");
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Network or server error";
+        console.error("[Sync] Error:", message);
         toast.error(`Sync failed: ${message}`);
       }
     },

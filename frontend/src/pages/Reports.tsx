@@ -14,6 +14,7 @@ import { useSearchParams } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { getCurriculumGradeScale, gradeFor as gradeForScore } from "@/lib/schoolData";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -42,6 +43,7 @@ interface ReportCardProps {
   teacherName?: string;
   principalName?: string;
   curriculumName?: string;
+  curriculumId?: string;
   termEndDate?: string;
   nextTermStartDate?: string;
 }
@@ -55,9 +57,10 @@ const GRADE_BANDS = [
   { min: 0, grade: "F", description: "Fail" },
 ] as const;
 
-function gradeFor(percentage: number): string {
-  const band = GRADE_BANDS.find((b) => percentage >= b.min);
-  return band ? band.grade : "F";
+function gradeFor(percentage: number, curriculumId?: string): string {
+  const scale = getCurriculumGradeScale(curriculumId ?? "cbc");
+  const band = scale.find((b) => percentage >= b.min && percentage <= b.max);
+  return band ? band.grade : (scale[scale.length - 1]?.grade ?? "F");
 }
 
 function formatReportDate(value?: string): string {
@@ -152,18 +155,19 @@ export default function Reports() {
   }, [state, search, sortBy, classFilter, examId]);
 
   const selectedExam = exams.find((exam) => exam.id === examId) ?? exams[exams.length - 1];
+  const reportClass = selectedStudent ? state.classes.find((item) => item.id === selectedStudent.classId) : undefined;
+  const reportStream = selectedStudent ? state.streams.find((item) => item.id === selectedStudent.streamId) : undefined;
+  const reportCurriculum = selectedStudent ? state.curricula.find((item) => item.id === reportClass?.curriculumId) : undefined;
   const reportCardSubjects = useMemo(() => {
     if (!selectedStudent || !selectedExam) return [];
     return state.subjects.map((subject) => {
       const sheet = state.sheets.find((item) => item.examId === selectedExam.id && item.subjectId === subject.id && item.classId === selectedStudent.classId);
       const entry = sheet ? state.entries.find((item) => item.sheetId === sheet.id && item.studentId === selectedStudent.id) : undefined;
       const score = entry?.score ?? null;
-      return { name: subject.name, code: subject.code, cat1: null, cat2: null, exam: score, total: score ?? 0, grade: score == null ? "-" : gradeFor(score), teacherComment: sheet?.teacherComment };
+      const gradeBand = score == null ? null : gradeForScore(score, getCurriculumGradeScale(selectedExam?.curriculumId ?? reportCurriculum?.id ?? "cbc"));
+      return { name: subject.name, code: subject.code, cat1: null, cat2: null, exam: score, total: score ?? 0, grade: gradeBand?.grade ?? "-", teacherComment: sheet?.teacherComment };
     }).filter((subject) => subject.exam !== null);
-  }, [selectedStudent, selectedExam, state]);
-  const reportClass = selectedStudent ? state.classes.find((item) => item.id === selectedStudent.classId) : undefined;
-  const reportStream = selectedStudent ? state.streams.find((item) => item.id === selectedStudent.streamId) : undefined;
-  const reportCurriculum = selectedStudent ? state.curricula.find((item) => item.id === reportClass?.curriculumId) : undefined;
+  }, [selectedStudent, selectedExam, reportCurriculum, state]);
   const nextTermExam = selectedExam ? exams.find((exam) => exam.year === selectedExam.year && exam.term === selectedExam.term + 1) ?? exams.find((exam) => exam.year === selectedExam.year + 1 && exam.term === 1) : undefined;
 
   const openReport = (id: string) => {
@@ -291,7 +295,7 @@ export default function Reports() {
             <DialogTitle>Report Card Preview</DialogTitle>
             <DialogDescription>{selectedStudent?.name} · {selectedStudent?.admissionNo}</DialogDescription>
           </DialogHeader>
-          {selectedStudent && selectedExam && <div ref={reportRef} className="report-preview print-page max-h-[65vh] overflow-y-auto bg-background p-2"><ReportCardPreview schoolName={state.settings.schoolName} studentId={selectedStudent.id} studentName={selectedStudent.name} admissionNumber={selectedStudent.admissionNo} className={reportClass?.name} stream={reportStream?.name} term={`Term ${selectedExam.term}`} year={selectedExam.year} subjects={reportCardSubjects} teacherName="" principalName={state.settings.principalName} curriculumName={reportCurriculum?.name || reportCurriculum?.shortName || selectedExam.curriculumId} termEndDate={selectedExam.endDate} nextTermStartDate={nextTermExam?.startDate} /></div>}
+          {selectedStudent && selectedExam && <div ref={reportRef} className="report-preview print-page max-h-[65vh] overflow-y-auto bg-background p-2"><ReportCardPreview schoolName={state.settings.schoolName} studentId={selectedStudent.id} studentName={selectedStudent.name} admissionNumber={selectedStudent.admissionNo} className={reportClass?.name} stream={reportStream?.name} term={`Term ${selectedExam.term}`} year={selectedExam.year} subjects={reportCardSubjects} teacherName="" principalName={state.settings.principalName} curriculumName={reportCurriculum?.name || reportCurriculum?.shortName || selectedExam.curriculumId} curriculumId={reportCurriculum?.id || selectedExam.curriculumId || "cbc"} termEndDate={selectedExam.endDate} nextTermStartDate={nextTermExam?.startDate} /></div>}
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between sm:space-x-0">
             <Button variant="outline" onClick={() => setPreviewOpen(false)}>Close</Button>
             <div className="flex flex-wrap justify-end gap-2">
@@ -313,9 +317,15 @@ function ReportCardPreview(props: ReportCardProps) {
   const totalObtained = (props.subjects || []).reduce((sum, s) => sum + s.total, 0);
   const totalPossible = (props.subjects || []).filter((s) => s.grade !== "-").length * maxTotal;
   const percentage = totalPossible > 0 ? Math.round((totalObtained / totalPossible) * 100) : 0;
-  const overallGrade = gradeFor(percentage);
+  const gradeScale = getCurriculumGradeScale(props.curriculumId ?? "cbc");
+  const overallGradeBand = gradeForScore(percentage, gradeScale);
+  const overallGrade = overallGradeBand?.grade ?? "N/A";
 
   const gradeDescriptions: Record<string, string> = {
+    "Exceeding Expectation": "Exceptional - Work is excellent in all areas",
+    "Meeting Expectation": "Very Good - Above average performance",
+    "Approaching Expectation": "Good - Satisfactory work with room for improvement",
+    "Below Expectation": "Needs Improvement - Significant work needed",
     A: "Exceptional - Work is excellent in all areas",
     B: "Very Good - Above average performance",
     C: "Good - Satisfactory work with room for improvement",
@@ -545,31 +555,13 @@ function ReportCardPreview(props: ReportCardProps) {
           <GraduationCap className="h-4 w-4" />
           Grade Scale ({props.curriculumName || "configured curriculum"})
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-center text-xs">
-          <div className="p-2 border rounded">
-            <span className="font-bold">80-100%</span>
-            <span className="block text-muted-foreground">A — Exceptional</span>
-          </div>
-          <div className="p-2 border rounded">
-            <span className="font-bold">70-79%</span>
-            <span className="block text-muted-foreground">B — Very Good</span>
-          </div>
-          <div className="p-2 border rounded">
-            <span className="font-bold">60-69%</span>
-            <span className="block text-muted-foreground">C — Good</span>
-          </div>
-          <div className="p-2 border rounded">
-            <span className="font-bold">50-59%</span>
-            <span className="block text-muted-foreground">D — Satisfactory</span>
-          </div>
-          <div className="p-2 border rounded">
-            <span className="font-bold">40-49%</span>
-            <span className="block text-muted-foreground">E — Needs Improvement</span>
-          </div>
-          <div className="p-2 border rounded">
-            <span className="font-bold">0-39%</span>
-            <span className="block text-muted-foreground">F — Fail</span>
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-xs">
+          {gradeScale.map((band) => (
+            <div key={band.grade} className="p-2 border rounded">
+              <span className="font-bold">{band.min}-{band.max}%</span>
+              <span className="block text-muted-foreground">{band.grade}</span>
+            </div>
+          ))}
         </div>
       </Card>
     </div>

@@ -546,12 +546,23 @@ export default function MarkEntry() {
                                 className="h-9 w-24"
                                 disabled={!canEnterMarks}
                                 value={draft}
-                                onChange={(ev) => setDrafts((prev) => ({ ...prev, [key]: ev.target.value }))}
-                                onBlur={(ev) => {
-                                  changeScore(stu.id, subjectId!, ev.target.value);
-                                  setDrafts((prev) => ({ ...prev, [key]: String(e?.score ?? "") }));
+                                onChange={(ev) => {
+                                  const newVal = ev.target.value;
+                                  setDrafts((prev) => ({ ...prev, [key]: newVal }));
+                                  if (newVal === "") {
+                                    changeScore(stu.id, subjectId!, "");
+                                  } else {
+                                    const num = Number(newVal);
+                                    if (!isNaN(num)) {
+                                      changeScore(stu.id, subjectId!, newVal);
+                                    }
+                                  }
                                 }}
-                                onKeyDown={(ev) => { if (ev.key === "Enter") (ev.target as HTMLInputElement).blur(); }}
+                                onKeyDown={(ev) => {
+                                  if (ev.key === "Enter") {
+                                    (ev.target as HTMLInputElement).blur();
+                                  }
+                                }}
                               />
                             </td>
                             <td>{gb ? <span className="chip bg-primary-soft text-primary border-primary/30" title={gb.grade}>{gb.shortForm || gb.grade}</span> : <span className="text-muted-foreground">—</span>}</td>

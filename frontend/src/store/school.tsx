@@ -299,10 +299,11 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
           setState(prev => ({ ...prev, lastSyncAt: new Date().toISOString(), syncQueue: [] }));
           toast.success("Sync successful");
         } else {
-          toast.error("Sync failed");
+          toast.error("Sync failed - please try again");
         }
       } catch (err) {
-        toast.error("Sync failed");
+        const message = err instanceof Error ? err.message : "Network or server error";
+        toast.error(`Sync failed: ${message}`);
       }
     },
     upsertTimetableSlot: (slot: TimetableItem) => {

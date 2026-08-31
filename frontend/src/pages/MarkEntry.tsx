@@ -71,7 +71,10 @@ export default function MarkEntry() {
     const groups: Array<{ streamId: string; streamName: string; students: typeof state.students }> = [];
 
     targetClasses.forEach(cls => {
-      const classStreams = state.streams.filter(st => st.classId === cls.id);
+      const classStreams = streamId 
+        ? state.streams.filter(st => st.classId === cls.id && st.id === streamId)
+        : state.streams.filter(st => st.classId === cls.id);
+      
       classStreams.forEach(stream => {
         const classStudents = state.students.filter(s => s.classId === cls.id && s.streamId === stream.id);
         if (classStudents.length === 0) return;
@@ -84,7 +87,7 @@ export default function MarkEntry() {
     });
 
     return groups;
-  }, [state.students, state.streams, targetClasses, subjectId, examId]);
+  }, [state.students, state.streams, targetClasses, streamId, subjectId, examId]);
 
   const totalStudents = useMemo(() => subjectStreamGroups.reduce((sum, g) => sum + g.students.length, 0), [subjectStreamGroups]);
 
@@ -551,7 +554,7 @@ export default function MarkEntry() {
                                 onKeyDown={(ev) => { if (ev.key === "Enter") (ev.target as HTMLInputElement).blur(); }}
                               />
                             </td>
-                            <td>{gb ? <span className="chip bg-primary-soft text-primary border-primary/30">{gb.grade}</span> : <span className="text-muted-foreground">—</span>}</td>
+                            <td>{gb ? <span className="chip bg-primary-soft text-primary border-primary/30" title={gb.grade}>{gb.shortForm || gb.grade}</span> : <span className="text-muted-foreground">—</span>}</td>
                           </tr>
                         );
                       })}

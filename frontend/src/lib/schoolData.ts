@@ -81,23 +81,24 @@ export interface SyncConflict {
 
 export interface GradeBand {
   grade: string;
+  shortForm?: string;
   min: number;
   max: number;
 }
 
 export const CBC_GRADE_BANDS: GradeBand[] = [
-  { grade: "Exceeding Expectation", min: 80, max: 100 },
-  { grade: "Meeting Expectation", min: 60, max: 79 },
-  { grade: "Approaching Expectation", min: 40, max: 59 },
-  { grade: "Below Expectation", min: 0, max: 39 },
+  { grade: "Exceeding Expectation", shortForm: "EE", min: 80, max: 100 },
+  { grade: "Meeting Expectation", shortForm: "ME", min: 60, max: 79 },
+  { grade: "Approaching Expectation", shortForm: "AE", min: 40, max: 59 },
+  { grade: "Below Expectation", shortForm: "BE", min: 0, max: 39 },
 ];
 
 export const EIGHT_FOUR_FOUR_GRADE_BANDS: GradeBand[] = [
-  { grade: "A", min: 80, max: 100 },
-  { grade: "B", min: 65, max: 79 },
-  { grade: "C", min: 50, max: 64 },
-  { grade: "D", min: 35, max: 49 },
-  { grade: "E", min: 0, max: 34 },
+  { grade: "A", shortForm: "A", min: 80, max: 100 },
+  { grade: "B", shortForm: "B", min: 65, max: 79 },
+  { grade: "C", shortForm: "C", min: 50, max: 64 },
+  { grade: "D", shortForm: "D", min: 35, max: 49 },
+  { grade: "E", shortForm: "E", min: 0, max: 34 },
 ];
 
 export function getCurriculumGradeScale(curriculumId?: string | null): GradeBand[] {

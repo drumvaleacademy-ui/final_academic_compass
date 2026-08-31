@@ -292,8 +292,25 @@ export default function Reports() {
       <Dialog open={previewOpen && !!selectedStudent && !!selectedExam} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-6xl p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Report Card Preview</DialogTitle>
-            <DialogDescription>{selectedStudent?.name} · {selectedStudent?.admissionNo}</DialogDescription>
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div className="flex-1">
+                <DialogTitle>Report Card Preview</DialogTitle>
+                <DialogDescription>{selectedStudent?.name} · {selectedStudent?.admissionNo}</DialogDescription>
+              </div>
+              <div className="flex gap-2 items-end">
+                <div className="flex gap-1">
+                  <Button variant="outline" size="sm" onClick={() => { const idx = reportRows.findIndex(r => r.studentId === selectedStudent?.id); if (idx > 0) { const prevRow = reportRows[idx - 1]; if (prevRow.studentId) setStudentId(prevRow.studentId); } }}>←</Button>
+                  <Button variant="outline" size="sm" onClick={() => { const idx = reportRows.findIndex(r => r.studentId === selectedStudent?.id); if (idx < reportRows.length - 1) { const nextRow = reportRows[idx + 1]; if (nextRow.studentId) setStudentId(nextRow.studentId); } }}>→</Button>
+                </div>
+                <div className="w-48">
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Exam</label>
+                  <Select value={examId || "all"} onValueChange={(value) => setExamId(value === "all" ? "" : value)}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Select exam" /></SelectTrigger>
+                    <SelectContent>{exams.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
           </DialogHeader>
           {selectedStudent && selectedExam && <div ref={reportRef} className="report-preview print-page max-h-[65vh] overflow-y-auto bg-background p-2"><ReportCardPreview schoolName={state.settings.schoolName} studentId={selectedStudent.id} studentName={selectedStudent.name} admissionNumber={selectedStudent.admissionNo} className={reportClass?.name} stream={reportStream?.name} term={`Term ${selectedExam.term}`} year={selectedExam.year} subjects={reportCardSubjects} teacherName="" principalName={state.settings.principalName} curriculumName={reportCurriculum?.name || reportCurriculum?.shortName || selectedExam.curriculumId} curriculumId={reportCurriculum?.id || selectedExam.curriculumId || "cbc"} termEndDate={selectedExam.endDate} nextTermStartDate={nextTermExam?.startDate} /></div>}
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between sm:space-x-0">

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { belongsToCurriculum, gradeFor, type SheetStatus, type ID, type CurriculumId } from "@/lib/schoolData";
+import { belongsToCurriculum, getCurriculumGradeScale, gradeFor, type SheetStatus, type ID, type CurriculumId } from "@/lib/schoolData";
 import { AlertTriangle, Cloud, CloudOff, Save, Lock, Upload } from "lucide-react";
 import { FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -529,7 +529,7 @@ export default function MarkEntry() {
                     <tbody>
                       {group.students.map((stu, i) => {
                         const e = sheet ? state.entries.find(x => x.sheetId === sheet.id && x.studentId === stu.id) : undefined;
-                        const gb = gradeFor(e?.score ?? null, curriculum.gradingScale);
+                        const gb = gradeFor(e?.score ?? null, curriculum?.gradingScale ?? getCurriculumGradeScale(activeCurriculum));
                         const key = `${stu.id}_${subjectId}`;
                         const draft = drafts[key] ?? String(e?.score ?? "");
                         return (

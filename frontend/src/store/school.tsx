@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, ReactNode, useEffect,
 import { pushSchoolSnapshot, fetchSchoolSnapshot, fetchPendingConflicts, resolveRemoteConflict } from "@/lib/syncService";
 import { useAuth } from "@/store/auth";
 import { toast } from "sonner";
-import { normalizeCurriculumId } from "@/lib/schoolData";
+import { getCurriculumGradeScale, normalizeCurriculumId } from "@/lib/schoolData";
 
 export interface GradeBand {
   grade: string;
@@ -187,8 +187,8 @@ interface SchoolContextValue {
 
 const defaultState: SchoolState = {
   curricula: [
-    { id: "cbc", name: "CBC", shortName: "CBC", description: "Competency-Based Curriculum" },
-    { id: "844", name: "844", shortName: "844", description: "8-4-4 System" },
+    { id: "cbc", name: "CBC", shortName: "CBC", description: "Competency-Based Curriculum", gradingScale: getCurriculumGradeScale("cbc") },
+    { id: "844", name: "844", shortName: "844", description: "8-4-4 System", gradingScale: getCurriculumGradeScale("844") },
   ],
   activeCurriculum: "cbc",
   classes: [],

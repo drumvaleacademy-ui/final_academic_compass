@@ -85,17 +85,30 @@ export interface GradeBand {
   max: number;
 }
 
-export function gradeFor(score: number | null, scale?: GradeBand[]): GradeBand | null {
+export const CBC_GRADE_BANDS: GradeBand[] = [
+  { grade: "Exceeding Expectation", min: 80, max: 100 },
+  { grade: "Meeting Expectation", min: 60, max: 79 },
+  { grade: "Approaching Expectation", min: 40, max: 59 },
+  { grade: "Below Expectation", min: 0, max: 39 },
+];
+
+export const EIGHT_FOUR_FOUR_GRADE_BANDS: GradeBand[] = [
+  { grade: "A", min: 80, max: 100 },
+  { grade: "B", min: 65, max: 79 },
+  { grade: "C", min: 50, max: 64 },
+  { grade: "D", min: 35, max: 49 },
+  { grade: "E", min: 0, max: 34 },
+];
+
+export function getCurriculumGradeScale(curriculumId?: string | null): GradeBand[] {
+  const normalized = normalizeCurriculumId(curriculumId ?? "cbc");
+  return normalized === "844" ? EIGHT_FOUR_FOUR_GRADE_BANDS : CBC_GRADE_BANDS;
+}
+
+export function gradeFor(score: number | null, scale?: GradeBand[] | string): GradeBand | null {
   if (score == null) return null;
-  const defaultScale: GradeBand[] = [
-    { grade: "A", min: 80, max: 100 },
-    { grade: "B", min: 65, max: 79 },
-    { grade: "C", min: 50, max: 64 },
-    { grade: "D", min: 30, max: 49 },
-    { grade: "E", min: 0, max: 29 },
-  ];
-  const s = scale ?? defaultScale;
-  const band = s.find((b) => score >= b.min && score <= b.max);
+  const resolvedScale = typeof scale === "string" ? getCurriculumGradeScale(scale) : (scale ?? getCurriculumGradeScale("cbc"));
+  const band = resolvedScale.find((b) => score >= b.min && score <= b.max);
   return band ?? null;
 }
 

@@ -107,11 +107,48 @@ export default function Reports() {
       const classItem = state.classes.find((item) => item.id === sheet?.classId || item.id === student?.classId);
       const stream = state.streams.find((item) => item.id === student?.streamId);
       const teacher = state.teachers.find((item) => item.id === sheet?.teacherId || item.id === subject?.teacherId);
-      return { id: entry.id, studentId: student?.id, learner: student?.name ?? "Unknown learner", admission: student?.admissionNo ?? "", teacher: teacher?.name ?? "Unassigned", className: classItem?.name ?? "Unassigned", stream: stream?.name ?? "", subject: subject?.name ?? "Unknown subject", exam: exam?.name ?? "Unknown exam", score: entry.score, pending: entry.pending };
+      return {
+        id: entry.id,
+        studentId: student?.id,
+        learner: student?.name ?? "Unknown learner",
+        admission: student?.admissionNo ?? "",
+        teacher: teacher?.name ?? "Unassigned",
+        classId: classItem?.id ?? student?.classId ?? "",
+        className: classItem?.name ?? "Unassigned",
+        streamId: stream?.id ?? student?.streamId ?? "",
+        stream: stream?.name ?? "",
+        subject: subject?.name ?? "Unknown subject",
+        exam: exam?.name ?? "Unknown exam",
+        score: entry.score,
+        pending: entry.pending,
+      };
     });
     const q = search.trim().toLowerCase();
-    const sortKey: "learner" | "teacher" | "className" | "subject" = sortBy === "class" ? "className" : sortBy;
-    return rows.filter((row) => (!classFilter || state.classes.find((item) => item.name === row.className)?.id === classFilter) && (!examId || state.exams.find((item) => item.name === row.exam)?.id === examId) && (!q || [row.learner, row.admission, row.teacher, row.className, row.subject, row.exam].some((value) => value.toLowerCase().includes(q)))).sort((a, b) => String(a[sortKey] ?? "").localeCompare(String(b[sortKey] ?? "")));
+
+    return rows
+      .filter((row) => {
+        const matchesClass = !classFilter || row.classId === classFilter;
+        const matchesExam = !examId || state.exams.find((item) => item.name === row.exam)?.id === examId;
+        const matchesQuery = !q || [row.learner, row.admission, row.teacher, row.className, row.stream, row.subject, row.exam].some((value) => value.toLowerCase().includes(q));
+        return matchesClass && matchesExam && matchesQuery;
+      })
+      .sort((a, b) => {
+        if (sortBy === "class") {
+          const classCompare = String(a.className ?? "").localeCompare(String(b.className ?? ""));
+          if (classCompare !== 0) return classCompare;
+          return String(a.stream ?? "").localeCompare(String(b.stream ?? ""));
+        }
+
+        if (sortBy === "teacher") {
+          return String(a.teacher ?? "").localeCompare(String(b.teacher ?? ""));
+        }
+
+        if (sortBy === "subject") {
+          return String(a.subject ?? "").localeCompare(String(b.subject ?? ""));
+        }
+
+        return String(a.learner ?? "").localeCompare(String(b.learner ?? ""));
+      });
   }, [state, search, sortBy, classFilter, examId]);
 
   const selectedExam = exams.find((exam) => exam.id === examId) ?? exams[exams.length - 1];

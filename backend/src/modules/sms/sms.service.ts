@@ -28,7 +28,7 @@ export class SmsService {
     return this.sendSms({
       schoolId: params.schoolId,
       recipient,
-      message: params.reportUrl ? `${params.message} View report: ${params.reportUrl}` : params.message,
+      message: params.reportUrl ? `${params.message} Final result slip: ${params.reportUrl}` : params.message,
       recipientType: "PARENT",
       triggeredBy: params.triggeredBy,
     });
@@ -59,8 +59,12 @@ export class SmsService {
       },
     }) as { id: string };
 
+    if (!result.success) {
+      throw new BadRequestException(result.error || "SMS provider rejected the message");
+    }
+
     return {
-      success: result.success,
+      success: true,
       logId: log.id,
       providerId: result.providerId,
       error: result.error,

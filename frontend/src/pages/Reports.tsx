@@ -63,6 +63,46 @@ function gradeString(percentage: number, curriculumId?: string): string {
   return band ? band.grade : (scale[scale.length - 1]?.grade ?? "F");
 }
 
+function makePdfFileName(value: string) {
+  return String(value || "report").toLowerCase().replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "report";
+}
+
+function getDirectReportPdfUrl(studentId: string, examId: string) {
+  const configuredBase = (import.meta.env.VITE_REPORT_PDF_BASE_URL ?? "").trim().replace(/\/$/, "");
+  const fileName = `${makePdfFileName(studentId)}-${makePdfFileName(examId)}.pdf`;
+  if (configuredBase) return `${configuredBase}/${fileName}`;
+  return `https://report-pdfs.drumvalesecondary.com/${fileName}`;
+}
+
+function buildResultSummary(subjects: NonNullable<ReportCardProps["subjects"]>, curriculumId?: string) {
+  const validSubjects = subjects.filter((subject) => typeof subject.total === "number" && subject.total > 0);
+  const subjectCount = validSubjects.length;
+  const average = subjectCount ? validSubjects.reduce((sum, subject) => sum + (subject.total ?? 0), 0) / subjectCount : 0;
+  const percentage = Math.round((average / 100) * 100);
+  const overallGrade = gradeFor(percentage, getCurriculumGradeScale(curriculumId ?? "cbc"));
+  const bestSubject = validSubjects.reduce((best, current) => {
+    if (!best || (current.total ?? 0) > (best.total ?? 0)) return current;
+    return best;
+  }, validSubjects[0]);
+
+  return {
+    subjectCount,
+    average: percentage,
+    overallGrade: overallGrade?.grade ?? "N/A",
+    bestSubject: bestSubject ? `${bestSubject.name} ${bestSubject.grade}` : "No subject summary available",
+  };
+}
+
+function buildReportCardSmsMessage(studentName: string, curriculumId: string | undefined, summary: ReturnType<typeof buildResultSummary>, pdfUrl: string) {
+  const curriculumLabel = String(curriculumId ?? "cbc").toLowerCase() === "844" ? "844" : "CBC";
+  const gradeLine = `${summary.average}% (${summary.overallGrade})`;
+  if (curriculumLabel === "844") {
+    return `Dear Parent, ${studentName}'s 8-4-4 results are ready. ${summary.subjectCount} subjects: ${gradeLine}. Best performance: ${summary.bestSubject}. Final result slip: ${pdfUrl}`;
+  }
+
+  return `Dear Parent, ${studentName}'s CBC results are ready. ${summary.subjectCount} learning areas: ${gradeLine}. Best performance: ${summary.bestSubject}. Final result slip: ${pdfUrl}`;
+}
+
 function formatReportDate(value?: string): string {
   if (!value) return "";
   const date = new Date(value);
@@ -230,14 +270,25 @@ export default function Reports() {
 
   const sendReportCard = async () => {
     if (!selectedStudent) { toast.error("Select a student first"); return; }
+    if (!selectedExam) { toast.error("Select a valid exam before sending the SMS."); return; }
+
     setIsSending(true);
-    const message = `${selectedStudent.name}'s report card is ready. Results are available in Academic Compass.`;
     try {
-      await api.post("/v2/sms/report-card", {
+      const curriculumId = reportCurriculum?.id || selectedExam.curriculumId || "cbc";
+      const reportSummary = buildResultSummary(reportCardSubjects, curriculumId);
+      const pdfUrl = getDirectReportPdfUrl(selectedStudent.id, selectedExam.id);
+      const message = buildReportCardSmsMessage(selectedStudent.name, curriculumId, reportSummary, pdfUrl);
+
+      const response = await api.post<{ success: boolean; error?: string }>('/v2/sms/report-card', {
         studentId,
         message,
-        reportUrl: `${window.location.origin}/reports?student=${encodeURIComponent(studentId)}`,
+        reportUrl: pdfUrl,
       });
+
+      if (!response?.success) {
+        throw new Error(response?.error || "The SMS provider rejected the report-card message.");
+      }
+
       toast.success("Report card SMS sent to the registered parent contact");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to send report card SMS");

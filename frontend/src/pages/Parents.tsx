@@ -276,6 +276,62 @@ export default function ParentsPage() {
               ))}
             </div>
 
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground"><Users className="h-3.5 w-3.5" />Linked Students</label>
+                <Button type="button" variant="outline" size="sm" onClick={() => {
+                  const unlinked = state.students.filter(s => !parent.studentIds.includes(s.id));
+                  if (!unlinked.length) {
+                    toast.info("All students are already linked to this parent.");
+                    return;
+                  }
+                  const studentId = prompt(
+                    `Select student to link:\n\n${unlinked.map((s, i) => `${i + 1}. ${s.name} (${s.admissionNo}) - Class ${state.classes.find(c => c.id === s.classId)?.name || "?"}`).join("\n")}\n\nEnter the number (1-${unlinked.length}):`,
+                  );
+                  if (!studentId) return;
+                  const idx = parseInt(studentId, 10) - 1;
+                  if (idx < 0 || idx >= unlinked.length) {
+                    toast.error("Invalid selection");
+                    return;
+                  }
+                  update((s) => {
+                    const item = s.parents.find((p) => p.id === parent.id);
+                    if (item && !item.studentIds.includes(unlinked[idx].id)) {
+                      item.studentIds.push(unlinked[idx].id);
+                    }
+                  });
+                }}>Link student</Button>
+              </div>
+              {(parent.studentIds || []).length > 0 ? (
+                <div className="space-y-2">
+                  {parent.studentIds.map((studentId) => {
+                    const student = state.students.find(s => s.id === studentId);
+                    const className = state.classes.find(c => c.id === student?.classId)?.name || "?";
+                    return (
+                      <div key={studentId} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-medium">{student?.name || "Unknown"}</span>
+                          <span className="text-xs text-muted-foreground">{student?.admissionNo} • {className}</span>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={() => {
+                          update((s) => {
+                            const item = s.parents.find((p) => p.id === parent.id);
+                            if (item) {
+                              item.studentIds = item.studentIds.filter(id => id !== studentId);
+                            }
+                          });
+                        }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-md border border-dashed px-3 py-2 text-center text-sm text-muted-foreground">
+                  No students linked yet
+                </div>
+              )}
+            </div>
+
             <div className="mt-4 flex flex-wrap gap-2">
               <Button size="sm" variant="secondary" onClick={() => persistParent(parent)}>Save parent</Button>
               <span className="inline-flex items-center rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">

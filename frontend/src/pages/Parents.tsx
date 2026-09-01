@@ -62,8 +62,6 @@ export default function ParentsPage() {
     return "";
   };
 
-  const selectedParentInvalid = selectedParent ? validateParentDraft(selectedParent) !== "" : true;
-
   const parents = state.parents.filter((parent) => {
     const q = query.trim().toLowerCase();
     if (!q) return true;
@@ -74,6 +72,7 @@ export default function ParentsPage() {
   });
 
   const selectedParent = selectedParentId ? state.parents.find(p => p.id === selectedParentId) : null;
+  const selectedParentInvalid = selectedParent ? validateParentDraft(selectedParent) !== "" : true;
 
   const createEmptyParent = () => {
     const newParent = {

@@ -13,7 +13,7 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 const basePath = process.env.BASE_PATH ?? '/';
-  const apiOrigin = process.env.VITE_API_ORIGIN ?? process.env.API_ORIGIN ?? 'http://localhost:3001';
+const apiOrigin = process.env.API_ORIGIN ?? process.env.VITE_API_ORIGIN ?? 'http://localhost:3001';
 const projectRoot = process.cwd();
 
 export default defineConfig({

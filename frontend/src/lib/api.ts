@@ -2,7 +2,7 @@
  * REST API client.
  */
 
-const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN ?? "")
+const API_ORIGIN = ((import.meta.env.API_ORIGIN ?? import.meta.env.VITE_API_ORIGIN ?? "") as string)
   .replace(/\/api\/?$/, "")
   .replace(/\/$/, "");
 const BASE = API_ORIGIN ? `${API_ORIGIN}/api` : "/api";

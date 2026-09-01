@@ -18,6 +18,7 @@ const projectRoot = process.cwd();
 
 export default defineConfig({
   base: basePath,
+  envPrefix: ['VITE_', 'API_'],
   plugins: [
     react(),
     tailwindcss(),

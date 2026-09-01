@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from "react";
-import { pushSchoolSnapshot, fetchSchoolSnapshot, fetchPendingConflicts, resolveRemoteConflict } from "@/lib/syncService";
+import { pushSchoolSnapshot, pushMarkEntries, fetchSchoolSnapshot, fetchPendingConflicts, resolveRemoteConflict } from "@/lib/syncService";
 import { useAuth } from "@/store/auth";
 import { toast } from "sonner";
 import { getCurriculumGradeScale, normalizeCurriculumId } from "@/lib/schoolData";
@@ -294,49 +294,42 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     update,
     setMarkScore: () => {},
     syncNow: async () => {
-      // Smart sync: only send queued entries to reduce payload size
       try {
-        // Get only entries that are queued for sync
         const queuedEntryIds = new Set(state.syncQueue);
         const queuedEntries = state.entries.filter(e => queuedEntryIds.has(e.id));
-        
+
         if (queuedEntries.length === 0) {
           toast.info("No changes to sync");
           return;
         }
-        
-        // Get sheets that have queued entries
-        const queuedSheetIds = new Set(queuedEntries.map(e => e.sheetId));
-        const queuedSheets = state.sheets.filter(s => queuedSheetIds.has(s.id));
-        
-        // Build minimal sync payload with only changed data
-        const snap = {
-          students: state.students,
-          parents: state.parents,
-          teachers: state.teachers,
-          classes: state.classes,
-          streams: state.streams,
-          subjects: state.subjects,
-          exams: state.exams,
-          sheets: queuedSheets.length > 0 ? queuedSheets : [],
-          entries: queuedEntries,
-          timetable: [],
-          curricula: state.curricula,
-          settings: state.settings,
-          classRemarks: [],
-          principalRemarks: [],
-          deletedIds: state.deletedIds,
-        };
-        
-        console.log(`[Sync] Sending ${queuedEntries.length} entries with ${queuedSheets.length} sheets`);
-        const res = await pushSchoolSnapshot(snap);
-        if (res === "ok") {
-          localChangesRef.current = false;
-          setState(prev => ({ ...prev, lastSyncAt: new Date().toISOString(), syncQueue: [] }));
-          toast.success(`Sync successful (${queuedEntries.length} entries)`);
-        } else {
-          toast.error("Sync failed - please try again");
+
+        const batchResults = await pushMarkEntries(
+          queuedEntries.map(entry => ({
+            id: entry.id,
+            curriculumId: state.curricula[0]?.id ?? "cbc",
+            sheetId: entry.sheetId,
+            studentId: entry.studentId,
+            score: entry.score,
+            version: 1,
+            deviceName: state.deviceName,
+          }))
+        );
+
+        const failed = batchResults.filter(result => result.status === "error");
+        if (failed.length > 0) {
+          throw new Error(`Failed to sync ${failed.length} mark ${failed.length > 1 ? "entries" : "entry"}`);
         }
+
+        localChangesRef.current = false;
+        setState(prev => ({
+          ...prev,
+          lastSyncAt: new Date().toISOString(),
+          syncQueue: prev.syncQueue.filter(id => !queuedEntryIds.has(id)),
+          entries: prev.entries.map(entry => (
+            queuedEntryIds.has(entry.id) ? { ...entry, pending: false } : entry
+          )),
+        }));
+        toast.success(`Sync successful (${queuedEntries.length} entries)`);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Network or server error";
         console.error("[Sync] Error:", message);

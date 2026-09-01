@@ -77,15 +77,12 @@ export async function pushMarkEntries(locals: Array<{
   deviceName: string;
 }>): Promise<Array<{ id: string; status: "ok" | "conflict" | "error" }>> {
   try {
-    const result = await api.post<{ results: Array<{ id: string; status: "ok" | "conflict" }> }>("/v2/marks/batch", {
+    const result = await api.post<{ results: Array<{ id: string; status: "ok" | "conflict" | "error" }> }>("/v2/marks/batch", {
       entries: locals.map(l => ({
         id: l.id,
-        curriculum_id: l.curriculumId,
-        sheet_id: l.sheetId,
-        student_id: l.studentId,
+        sheetId: l.sheetId,
+        studentId: l.studentId,
         score: l.score,
-        version: l.version,
-        device_name: l.deviceName,
       })),
     });
     return result.results.map(r => ({ ...r, status: r.status as "ok" | "conflict" | "error" }));

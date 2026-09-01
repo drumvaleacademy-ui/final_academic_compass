@@ -45,15 +45,41 @@ export default function MarkEntry() {
   const preSheet = params.get("sheet");
   const preSheetObj = state.sheets.find(s => s.id === preSheet);
 
-  const [classId, setClassId]     = useState<string>(preSheetObj?.classId || "");
-  const [streamId, setStreamId]   = useState<string>(preSheetObj?.streamId || "");
-  const [subjectId, setSubjectId] = useState<string>(preSheetObj?.subjectId || "");
-  const [examId, setExamId]       = useState<string>(preSheetObj?.examId || "");
+  // Restore from localStorage or URL params
+  const getInitialState = () => {
+    const stored = typeof window !== "undefined" ? localStorage.getItem("ac_mark_entry_filters") : null;
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        return parsed;
+      } catch {}
+    }
+    return {
+      classId: preSheetObj?.classId || "",
+      streamId: preSheetObj?.streamId || "",
+      subjectId: preSheetObj?.subjectId || "",
+      examId: preSheetObj?.examId || "",
+    };
+  };
+
+  const initial = getInitialState();
+  const [classId, setClassId]     = useState<string>(initial.classId);
+  const [streamId, setStreamId]   = useState<string>(initial.streamId);
+  const [subjectId, setSubjectId] = useState<string>(initial.subjectId);
+  const [examId, setExamId]       = useState<string>(initial.examId);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState("");
   const [importBusy, setImportBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Persist filter selections to localStorage whenever they change
+  useEffect(() => {
+    const filters = { classId, streamId, subjectId, examId };
+    try {
+      localStorage.setItem("ac_mark_entry_filters", JSON.stringify(filters));
+    } catch {}
+  }, [classId, streamId, subjectId, examId]);
 
   const classes  = state.classes.filter(c => belongsToCurriculum(c.curriculumId, activeCurriculum));
   const streams  = state.streams.filter(s => s.classId === classId);

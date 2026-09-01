@@ -2,9 +2,12 @@
  * REST API client.
  */
 
-const API_ORIGIN = ((import.meta.env.API_ORIGIN ?? import.meta.env.VITE_API_ORIGIN ?? "") as string)
-  .replace(/\/api\/?$/, "")
-  .replace(/\/$/, "");
+const API_ORIGIN = ((
+  (import.meta.env.API_ORIGIN ??
+    import.meta.env.VITE_API_ORIGIN ??
+    (typeof window !== "undefined" && (window as any).__API_ORIGIN__) ??
+    "") as string
+)).replace(/\/api\/?$/, "").replace(/\/$/, "");
 const BASE = API_ORIGIN ? `${API_ORIGIN}/api` : "/api";
 
 function isNetworkError(err: unknown): boolean {
@@ -63,7 +66,7 @@ async function request<T>(
     if (isNetworkError(err)) {
       throw new Error(
         `Cannot reach the server at ${API_ORIGIN || window.location.origin}. ` +
-        "If you are in production, set VITE_API_ORIGIN to your deployed API URL. " +
+        "If you are in production, set API_ORIGIN or VITE_API_ORIGIN to your deployed API URL. " +
         "If you are in development, make sure the API server is running."
       );
     }

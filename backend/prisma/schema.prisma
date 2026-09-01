@@ -22,6 +22,7 @@ model School {
   classes        Class[]
   csvImports     CsvImport[]
   exams          Exam[]
+  parents        Parent[]
   smsLogs        SmsLog[]
   subjects       Subject[]
   terms          Term[]
@@ -48,6 +49,7 @@ model User {
   activationTokens ActivationToken[]
   auditLogs        AuditLog[]        @relation("UserAuditLogs")
   createdImports   CsvImport[]       @relation("UserCsvImports")
+  parentProfile    Parent[]
   refreshTokens    RefreshToken[]
   roles            UserRole[]
   school           School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -174,21 +176,33 @@ model TeacherClassAssignment {
 }
 
 model Parent {
-  id        String          @id @default(uuid())
-  userId    String          @unique
-  createdBy String
-  createdAt DateTime        @default(now())
-  children  StudentParent[]
+  id           String          @id @default(uuid())
+  schoolId     String
+  userId       String?
+  fullName     String?
+  email        String?
+  relationship String?
+  phoneNumbers String[]        @default([])
+  createdBy    String
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  children     StudentParent[]
+  school       School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user         User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   @@map("parents")
 }
 
 model StudentParent {
-  id        String   @id @default(uuid())
-  studentId String
-  parentId  String
-  createdAt DateTime @default(now())
-  parent    Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
-  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id           String   @id @default(uuid())
+  studentId    String
+  parentId     String
+  relationship String?
+  isPrimary    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  parent       Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, parentId])
   @@map("student_parents")
 }
 

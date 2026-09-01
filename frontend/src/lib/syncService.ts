@@ -51,6 +51,7 @@ export interface RemoteConflict {
 
 export interface SchoolSnapshot {
   students: any[];
+  parents: any[];
   teachers: any[];
   classes: any[];
   streams: any[];
@@ -208,6 +209,11 @@ export async function fetchSchoolSnapshot(): Promise<SchoolSnapshot | null> {
       students: (snapshot.students ?? []).map((item: any) => ({
         ...item,
         curriculumId: String(item.curriculumId ?? classCurricula.get(item.classId) ?? "cbc").trim().toLowerCase(),
+      })),
+      parents: (snapshot.parents ?? []).map((item: any) => ({
+        ...item,
+        phoneNumbers: Array.isArray(item.phoneNumbers) ? item.phoneNumbers.map((phone: any) => String(phone ?? "").trim()).filter(Boolean) : [],
+        studentIds: Array.isArray(item.studentIds) ? item.studentIds.map((studentId: any) => String(studentId ?? "").trim()).filter(Boolean) : [],
       })),
       subjects: (snapshot.subjects ?? []).map((item: any) => ({ ...item, curriculumId: String(item.curriculumId ?? "cbc").trim().toLowerCase() })),
       exams: (snapshot.exams ?? []).map((item: any) => ({ ...item, curriculumId: String(item.curriculumId ?? "cbc").trim().toLowerCase() })),

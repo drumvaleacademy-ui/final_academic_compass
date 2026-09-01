@@ -19,6 +19,11 @@ export class SyncService {
     const classes = await db.class.findMany({ where: { schoolId }, include: { streams: true } });
     const subjects = await db.subject.findMany({ where: { schoolId } });
     const students = await db.student.findMany({ where: { schoolId }, include: { class: true } });
+    const parents = await db.parent.findMany({
+      where: { schoolId },
+      include: { children: { select: { studentId: true, relationship: true, isPrimary: true } } },
+      orderBy: { fullName: "asc" },
+    });
     const exams = await db.exam.findMany({ where: { schoolId }, include: { term: true } });
     const sheets = await db.markSheet.findMany({ where: { class: { schoolId } } });
     const entries = await db.markEntry.findMany({ where: { sheet: { class: { schoolId } } } });
@@ -31,6 +36,17 @@ export class SyncService {
         streams: classes.flatMap((item: any) => item.streams.map((stream: any) => ({ id: stream.id, classId: stream.classId, name: stream.name }))),
         subjects: subjects.map((item: any) => ({ id: item.id, curriculumId: item.curriculumId, name: item.name, code: item.code })),
         students: students.map((item: any) => ({ id: item.id, curriculumId: item.class?.curriculumId ?? "cbc", admissionNo: item.admissionNo, name: item.fullName, gender: item.gender, classId: item.classId, streamId: item.streamId })),
+        parents: parents.map((item: any) => ({
+          id: item.id,
+          schoolId: item.schoolId,
+          fullName: item.fullName ?? "",
+          email: item.email ?? "",
+          relationship: item.relationship ?? "Parent",
+          phoneNumbers: Array.isArray(item.phoneNumbers) ? item.phoneNumbers.filter(Boolean) : [],
+          studentIds: item.children.map((link: any) => link.studentId),
+          userId: item.userId,
+          createdBy: item.createdBy,
+        })),
         exams: exams.map((item: any) => ({ id: item.id, curriculumId: item.curriculumId, name: item.name, term: Number(item.term?.name?.replace(/\D/g, "")) || 1, year: item.year, outOf: item.outOf, status: item.status, startDate: item.term?.startDate?.toISOString?.(), endDate: item.term?.endDate?.toISOString?.() })),
         sheets: sheets.map((item: any) => ({ id: item.id, curriculumId: item.curriculumId, classId: item.classId, streamId: item.streamId, subjectId: item.subjectId, examId: item.examId, status: item.status, locked: item.locked, teacherComment: item.comment, teacherId: item.teacherId })),
         entries: entries.map((item: any) => ({ id: item.id, sheetId: item.sheetId, studentId: item.studentId, score: item.score, updatedAt: item.updatedAt, updatedBy: item.updatedBy, pending: false })),
@@ -66,6 +82,7 @@ export class SyncService {
     const existingStreams = new Map<string, any>((current.data?.streams ?? []).map((item: any) => [item.id, item]));
     const existingSubjects = new Map<string, any>((current.data?.subjects ?? []).map((item: any) => [item.id, item]));
     const existingStudents = new Map<string, any>((current.data?.students ?? []).map((item: any) => [item.id, item]));
+    const existingParents = new Map<string, any>((current.data?.parents ?? []).map((item: any) => [item.id, item]));
 
     await db.$transaction(async (tx: any) => {
       const deletedIds = (merged.deletedIds ?? []).map(String);
@@ -115,6 +132,49 @@ export class SyncService {
           update: { admissionNo: item.admissionNo, fullName: item.name, gender: item.gender, classId: item.classId, streamId: item.streamId, isActive: true },
           create: { id: item.id, schoolId, admissionNo: item.admissionNo, fullName: item.name, gender: item.gender, classId: item.classId, streamId: item.streamId },
         });
+      }
+      for (const item of merged.parents ?? []) {
+        const previous = existingParents.get(item.id);
+        const phoneNumbers = Array.isArray(item.phoneNumbers) ? item.phoneNumbers.filter((phone: any) => typeof phone === "string" && phone.trim()).map((phone: any) => String(phone).trim()) : [];
+        const studentIds = Array.isArray(item.studentIds) ? item.studentIds.filter(Boolean) : [];
+        if (previous && previous.fullName === (item.fullName ?? "") && previous.email === (item.email ?? "") && previous.relationship === (item.relationship ?? "Parent") && JSON.stringify(previous.phoneNumbers ?? []) === JSON.stringify(phoneNumbers)) continue;
+        const parentId = await tx.parent.upsert({
+          where: { id: item.id },
+          update: {
+            fullName: item.fullName ?? null,
+            email: item.email ?? null,
+            relationship: item.relationship ?? "Parent",
+            phoneNumbers,
+            createdBy: item.createdBy ?? "system",
+            schoolId,
+          },
+          create: {
+            id: item.id,
+            schoolId,
+            userId: item.userId ?? null,
+            fullName: item.fullName ?? null,
+            email: item.email ?? null,
+            relationship: item.relationship ?? "Parent",
+            phoneNumbers,
+            createdBy: item.createdBy ?? "system",
+          },
+        }).then((record: any) => record.id);
+
+        const studentIdsSet = new Set(studentIds);
+        const existingLinks = await tx.studentParent.findMany({ where: { parentId } });
+        const currentLinks = new Set(existingLinks.map((link: any) => link.studentId));
+        for (const studentId of Array.from(studentIdsSet)) {
+          if (!studentId) continue;
+          await tx.studentParent.upsert({
+            where: { studentId_parentId: { studentId, parentId } },
+            update: { relationship: item.relationship ?? "Parent", isPrimary: false },
+            create: { id: `sp_${schoolId}_${studentId}_${parentId}`.slice(0, 64), studentId, parentId, relationship: item.relationship ?? "Parent", isPrimary: false },
+          });
+          currentLinks.delete(studentId);
+        }
+        for (const staleStudentId of Array.from(currentLinks)) {
+          await tx.studentParent.deleteMany({ where: { parentId, studentId: staleStudentId } });
+        }
       }
       for (const item of merged.exams ?? []) {
         const termNumber = Number(item.term) || 1;
@@ -220,7 +280,7 @@ export class SyncService {
     ].map(String));
 
     const merged = { ...remote, deletedIds: Array.from(deleted) };
-    const arrays = ["students", "teachers", "classes", "streams", "subjects", "exams", "sheets", "entries", "timetable"];
+    const arrays = ["students", "parents", "teachers", "classes", "streams", "subjects", "exams", "sheets", "entries", "timetable"];
     for (const key of arrays) {
       const remoteArr = Array.isArray(remote[key]) ? remote[key] : [];
       const localArr = Array.isArray(local[key]) ? local[key] : [];
@@ -245,3 +305,4 @@ export class SyncService {
     return merged;
   }
 }
+

@@ -58,6 +58,18 @@ export interface StudentItem {
   vap?: string;
 }
 
+export interface ParentItem {
+  id: string;
+  schoolId?: string;
+  fullName: string;
+  email?: string;
+  relationship?: string;
+  phoneNumbers: string[];
+  studentIds: string[];
+  userId?: string | null;
+  createdBy?: string;
+}
+
 export interface ExamItem {
   id: string;
   curriculumId: string;
@@ -158,6 +170,7 @@ export interface SchoolState {
   subjects: SubjectItem[];
   teachers: TeacherItem[];
   students: StudentItem[];
+  parents: ParentItem[];
   exams: ExamItem[];
   sheets: SheetItem[];
   entries: EntryItem[];
@@ -196,6 +209,7 @@ const defaultState: SchoolState = {
   subjects: [],
   teachers: [],
   students: [],
+  parents: [],
   exams: [],
   sheets: [],
   entries: [],
@@ -298,6 +312,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
         // Build minimal sync payload with only changed data
         const snap = {
           students: state.students,
+          parents: state.parents,
           teachers: state.teachers,
           classes: state.classes,
           streams: state.streams,
@@ -378,6 +393,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
         saveToast = toast.loading("Saving details...");
         const snap = {
           students: state.students,
+          parents: state.parents,
           teachers: state.teachers,
           classes: state.classes,
           streams: state.streams,
@@ -429,6 +445,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
           setState(prev => ({
             ...prev,
             students: server.students ?? prev.students,
+            parents: server.parents ?? prev.parents,
             teachers: server.teachers ?? prev.teachers,
             classes: server.classes ?? prev.classes,
             streams: server.streams ?? prev.streams,

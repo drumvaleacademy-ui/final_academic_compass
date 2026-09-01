@@ -13,16 +13,16 @@ export class SmsService {
 
   async sendReportCard(params: { schoolId: string; studentId: string; message: string; reportUrl?: string; triggeredBy: string }) {
     const recipients = await this.prisma.$queryRaw<Array<{ phone: string | null }>>`
-      SELECT u."phoneNumber" AS phone
+      SELECT COALESCE(NULLIF(p."phoneNumbers"[1], ''), NULLIF(p."phoneNumbers"[0], ''), u."phoneNumber") AS phone
       FROM "student_parents" sp
       JOIN "parents" p ON p."id" = sp."parentId"
-      JOIN "users" u ON u."id" = p."userId"
+      LEFT JOIN "users" u ON u."id" = p."userId"
       JOIN "students" s ON s."id" = sp."studentId"
       WHERE sp."studentId" = ${params.studentId} AND s."schoolId" = ${params.schoolId}
       ORDER BY sp."createdAt" ASC
       LIMIT 1
     `;
-    const recipient = recipients[0]?.phone;
+    const recipient = recipients[0]?.phone?.trim();
     if (!recipient) throw new BadRequestException("No parent phone number is registered for this student");
 
     return this.sendSms({

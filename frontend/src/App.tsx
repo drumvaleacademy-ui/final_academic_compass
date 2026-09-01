@@ -14,6 +14,7 @@ import AuthCallback from "./pages/AuthCallback";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Students from "./pages/Students";
+import Parents from "./pages/Parents";
 import Classes from "./pages/Classes";
 import Subjects from "./pages/Subjects";
 import Teachers from "./pages/Teachers";
@@ -51,6 +52,7 @@ const App = () => (
                 <Route element={<AppShell />}>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/students" element={<Students />} />
+                  <Route path="/parents" element={<Parents />} />
                   <Route path="/classes" element={<Classes />} />
                   <Route path="/subjects" element={<Subjects />} />
                   <Route path="/teachers" element={<Teachers />} />

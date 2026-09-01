@@ -20,6 +20,7 @@ import { toast } from "sonner";
 const NAV = [
   { to: "/",           label: "Dashboard",       icon: LayoutDashboard, end: true },
   { to: "/students",   label: "Students",         icon: Users },
+  { to: "/parents",    label: "Parents & Guardians", icon: UserSquare },
   { to: "/classes",    label: "Classes & Streams", icon: GraduationCap },
   { to: "/subjects",   label: "Subjects",         icon: BookOpen },
   { to: "/teachers",   label: "Teachers",         icon: UserSquare },

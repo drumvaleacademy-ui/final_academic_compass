@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,22 +19,20 @@ interface ParentDraft {
 }
 
 export default function ParentsPage() {
-  const { state, update, saveDetails } = useSchool();
+  const { state, update } = useSchool();
   const [query, setQuery] = useState("");
   const [importRows, setImportRows] = useState<any[] | null>(null);
   const [extracting, setExtracting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const parents = useMemo(() => {
+  const parents = state.parents.filter((parent) => {
     const q = query.trim().toLowerCase();
-    return state.parents.filter((parent) => {
-      if (!q) return true;
-      return [parent.fullName, parent.email, parent.relationship, parent.phoneNumbers.join(", ")]
-        .join(" ")
-        .toLowerCase()
-        .includes(q);
-    });
-  }, [query, state.parents]);
+    if (!q) return true;
+    return [parent.fullName, parent.email || "", parent.relationship || "", (parent.phoneNumbers || []).join(", ")]
+      .join(" ")
+      .toLowerCase()
+      .includes(q);
+  });
 
   const createEmptyParent = () => {
     update((s) => {
@@ -219,7 +217,6 @@ export default function ParentsPage() {
             </div>
             <Button variant="outline" onClick={() => inputRef.current?.click()}><Upload className="h-4 w-4 mr-1" />Import Excel</Button>
             <Button onClick={createEmptyParent}><Plus className="h-4 w-4 mr-1" />Add parent</Button>
-            <Button variant="secondary" size="sm" onClick={() => saveDetails?.()}>Save details</Button>
           </div>
         }
       />

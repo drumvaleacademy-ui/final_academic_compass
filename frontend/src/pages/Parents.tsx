@@ -8,6 +8,16 @@ import { useSchool } from "@/store/school";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { api } from "@/lib/api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ParentDraft {
   id: string;
@@ -31,6 +41,7 @@ export default function ParentsPage() {
   const [importRows, setImportRows] = useState<any[] | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
+  const [pendingDeleteParentId, setPendingDeleteParentId] = useState<string | null>(null);
   const [studentSelector, setStudentSelector] = useState<StudentSelectorState>({
     isOpen: false,
     parentId: null,
@@ -38,6 +49,20 @@ export default function ParentsPage() {
     sortBy: "name",
   });
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const validateParentDraft = (parent: ParentDraft | null) => {
+    if (!parent) return "Parent details are missing.";
+
+    const fullName = parent.fullName.trim();
+    const hasContact = (parent.phoneNumbers ?? []).some((phone) => phone.trim()) || (parent.email ?? "").trim().length > 0;
+
+    if (!fullName) return "Parent or guardian name is required.";
+    if (!hasContact) return "Add at least one phone number or email before saving.";
+
+    return "";
+  };
+
+  const selectedParentInvalid = selectedParent ? validateParentDraft(selectedParent) !== "" : true;
 
   const parents = state.parents.filter((parent) => {
     const q = query.trim().toLowerCase();
@@ -82,34 +107,44 @@ export default function ParentsPage() {
   };
 
   const persistParent = async (parent: ParentDraft) => {
+    const validationError = validateParentDraft(parent);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
     try {
-      if (!parent.fullName.trim()) {
-        toast.error("Parent or guardian name is required.");
-        return;
-      }
       const payload = {
         id: parent.id,
-        fullName: parent.fullName,
-        email: parent.email,
-        relationship: parent.relationship || "Parent",
+        fullName: parent.fullName.trim(),
+        email: (parent.email ?? "").trim(),
+        relationship: (parent.relationship ?? "Parent").trim() || "Parent",
         phoneNumbers: (parent.phoneNumbers ?? []).map((phone) => phone.trim()).filter(Boolean),
         studentIds: parent.studentIds ?? [],
       };
       await api.post("/v2/parents", payload);
-      toast.success(`${parent.fullName} saved.`);
+      toast.success(`${payload.fullName} saved.`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not save parent details.");
     }
   };
 
-  const deleteParent = (parentId: string) => {
-    update((s) => {
-      s.parents = s.parents.filter((p) => p.id !== parentId);
-    });
-    if (selectedParentId === parentId) setSelectedParentId(null);
-    void api.delete(`/v2/parents/${encodeURIComponent(parentId)}`).catch(() => {
-      toast.error("Could not delete on server; local record removed only.");
-    });
+  const deleteParent = async (parentId: string) => {
+    const parent = state.parents.find((item) => item.id === parentId);
+    if (!parent) return;
+
+    try {
+      await api.delete(`/v2/parents/${encodeURIComponent(parentId)}`);
+      update((s) => {
+        s.parents = s.parents.filter((p) => p.id !== parentId);
+      });
+      if (selectedParentId === parentId) setSelectedParentId(null);
+      toast.success("Parent deleted.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not delete parent from server.");
+    } finally {
+      setPendingDeleteParentId(null);
+    }
   };
 
   const importParents = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -347,7 +382,7 @@ export default function ParentsPage() {
             <div className="flex flex-col border rounded-lg overflow-hidden bg-card">
               <div className="p-4 border-b flex items-center justify-between">
                 <h2 className="font-semibold text-lg">{selectedParent.fullName}</h2>
-                <Button variant="ghost" size="icon" onClick={() => deleteParent(selectedParent.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                <Button variant="ghost" size="icon" onClick={() => setPendingDeleteParentId(selectedParent.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -439,7 +474,14 @@ export default function ParentsPage() {
               </div>
 
               <div className="p-4 border-t">
-                <Button className="w-full" onClick={() => persistParent(selectedParent)}>Save Changes</Button>
+                <Button
+                  className="w-full"
+                  onClick={() => persistParent(selectedParent)}
+                  disabled={selectedParentInvalid}
+                  title={selectedParentInvalid ? validateParentDraft(selectedParent) : "Save parent details"}
+                >
+                  Save Changes
+                </Button>
               </div>
             </div>
           ) : (
@@ -449,6 +491,31 @@ export default function ParentsPage() {
           )}
         </div>
       </div>
+
+      <AlertDialog open={!!pendingDeleteParentId} onOpenChange={(open) => !open && setPendingDeleteParentId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete parent?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDeleteParentId
+                ? `This will remove ${state.parents.find((parent) => parent.id === pendingDeleteParentId)?.fullName || "this parent"} and any linked student connections.`
+                : "This will remove the parent and any linked student connections."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingDeleteParentId(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDeleteParentId) {
+                  void deleteParent(pendingDeleteParentId);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {studentSelector.isOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">

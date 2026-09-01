@@ -50,7 +50,15 @@ async function request<T>(
       const msg = err.message || `Request failed (${res.status})`;
       throw new Error(res.status === 401 || res.status === 403 ? `Unauthorized: ${msg}` : msg);
     }
-    return res.json();
+
+    const text = await res.text();
+    if (!text) return null as T;
+
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      return text as unknown as T;
+    }
   } catch (err) {
     if (isNetworkError(err)) {
       throw new Error(

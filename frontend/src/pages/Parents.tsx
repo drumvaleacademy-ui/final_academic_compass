@@ -104,10 +104,10 @@ export default function ParentsPage() {
       const workbook = XLSX.read(data, { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: "" });
-      if (!rawRows.length) throw new Error("The file is empty.");
+      if (!rawRows.length) throw new Error("No parent or guardian rows were found in the file.");
 
       const header = rawRows[0].map((cell) => String(cell ?? "").trim().toLowerCase());
-      const hasHeader = header.some((cell) => /name|phone|mobile|email|guardian|parent|relationship|student|admission/.test(cell));
+      const hasHeader = header.some((cell) => /name|phone|mobile|email|guardian|parent|relationship|student|admission|class/.test(cell));
 
       const rows = (hasHeader ? rawRows.slice(1) : rawRows).map((row) => {
         const cells = Array.isArray(row) ? row : [];
@@ -116,25 +116,38 @@ export default function ParentsPage() {
           rowMap[label] = String(cells[idx] ?? "").trim();
         });
 
+        // Extract student name and find student by class + admission number
+        const studentName = rowMap.name || rowMap["student name"] || rowMap.student || "";
+        const className = rowMap.class || rowMap["class name"] || rowMap.form || "";
+        const admissionNo = rowMap.admission || rowMap.admissionno || rowMap["admission number"] || rowMap["admission no"] || "";
+        
+        const studentIds = admissionNo
+          ? [state.students.find((student) => {
+              const admissionMatch = student.admissionNo.toLowerCase() === admissionNo.toLowerCase();
+              const classMatch = !className || state.classes.find((c) => c.id === student.classId)?.name?.toLowerCase() === className.toLowerCase();
+              return admissionMatch && classMatch;
+            })?.id]
+              .filter(Boolean) as string[]
+          : [];
+
+        // Extract parent/guardian name - prioritize phone row column names
         const name = rowMap.name || rowMap.fullname || rowMap.guardian || rowMap.parent || rowMap["parent name"] || rowMap["guardian name"] || "";
         const email = rowMap.email || rowMap["email address"] || "";
         const relationship = rowMap.relationship || rowMap.guardian || rowMap.parent || rowMap["parent/guardian"] || "Parent";
+        
+        // Map phone numbers - prioritize parent phone columns
         const phoneNumbers = [
           rowMap.phone,
-          rowMap.mobile,
           rowMap["phone number"],
-          rowMap["mobile number"],
           rowMap["parent phone"],
+          rowMap["parent phone number"],
           rowMap["guardian phone"],
+          rowMap.mobile,
+          rowMap["mobile number"],
         ].filter(Boolean).reduce((acc: string[], value) => {
           const parts = value.split(/[;,/|]/).map((p) => p.trim()).filter(Boolean);
           return [...acc, ...parts];
         }, []);
-        const studentIds = [rowMap.admission, rowMap.admissionno, rowMap["admission number"], rowMap.student, rowMap["student admission"]]
-          .filter(Boolean)
-          .map((value) => value.trim())
-          .map((value) => state.students.find((student) => student.admissionNo.toLowerCase() === value.toLowerCase())?.id)
-          .filter(Boolean) as string[];
 
         return {
           id: `par_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -150,7 +163,7 @@ export default function ParentsPage() {
       setImportRows(rows);
       toast.success(`Prepared ${rows.length} parent record${rows.length === 1 ? "" : "s"} for import.`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not import parent records.");
+      toast.error(err instanceof Error ? err.message : "No parent or guardian rows were found in the file.");
     } finally {
       event.target.value = "";
     }

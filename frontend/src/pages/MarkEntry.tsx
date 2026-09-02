@@ -160,7 +160,7 @@ export default function MarkEntry() {
             score: null,
             updatedAt: Date.now(),
             updatedBy: "local",
-            pending: true,
+            pending: false,
           });
         }
       });
@@ -473,7 +473,7 @@ export default function MarkEntry() {
     <div>
       <PageHeader
         title="Offline Mark Entry"
-        description="Enter marks anywhere. Changes queue locally when offline and sync when reconnected."
+        description="Enter marks and upload them explicitly to the server when you are ready."
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate("/reports?scope=all")}>
@@ -485,7 +485,7 @@ export default function MarkEntry() {
             <Badge variant="outline" className={state.online ? "border-success text-success" : "border-destructive text-destructive"}>
               {state.online ? <><Cloud className="h-3 w-3 mr-1"/>Online</> : <><CloudOff className="h-3 w-3 mr-1"/>Offline</>}
             </Badge>
-            {pendingCount > 0 && <Badge className="bg-warning text-warning-foreground">{pendingCount} queued</Badge>}
+            {pendingCount > 0 && <Badge className="bg-warning text-warning-foreground">{pendingCount} unsaved</Badge>}
             <Button size="sm" disabled={pendingCount === 0} onClick={() => void saveMarks()}>
               <Save className="h-4 w-4 mr-1"/>Save marks
             </Button>

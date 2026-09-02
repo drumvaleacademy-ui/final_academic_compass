@@ -202,7 +202,13 @@ function cachedState(userId: string | undefined): SchoolState {
   if (!userId || typeof window === "undefined") return defaultState;
   try {
     const cached = JSON.parse(localStorage.getItem(`ac_school_draft_${userId}`) || "null");
-    return cached ? { ...defaultState, ...cached } : defaultState;
+    return cached ? {
+      ...defaultState,
+      ...cached,
+      entries: Array.isArray(cached.entries)
+        ? cached.entries.map((entry: EntryItem) => ({ ...entry, pending: false }))
+        : defaultState.entries,
+    } : defaultState;
   } catch {
     return defaultState;
   }
@@ -293,12 +299,15 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
       const entries = stateRef.current.entries.filter((entry) => entry.pending);
       if (!entries.length) return;
       try {
-        await api.post("/v2/marks/batch", {
+        const result = await api.post<{ results: Array<{ id?: string; status: "ok" | "error" }> }>("/v2/marks/batch", {
           entries: entries.map((entry) => ({ id: entry.id, sheetId: entry.sheetId, studentId: entry.studentId, score: entry.score })),
         });
-        setState(prev => ({ ...prev, entries: prev.entries.map(entry => entry.pending ? { ...entry, pending: false } : entry) }));
+        const successfulIds = new Set((result.results ?? []).filter((item) => item.status === "ok" && item.id).map((item) => item.id));
+        setState(prev => ({ ...prev, entries: prev.entries.map(entry => successfulIds.has(entry.id) ? { ...entry, pending: false } : entry) }));
         invalidateSchoolData();
-        toast.success(`${entries.length} mark${entries.length === 1 ? "" : "s"} saved`);
+        const failedCount = entries.length - successfulIds.size;
+        if (failedCount) toast.error(`${failedCount} mark${failedCount === 1 ? "" : "s"} could not be saved.`);
+        else toast.success(`${entries.length} mark${entries.length === 1 ? "" : "s"} saved`);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to save marks.");
       }

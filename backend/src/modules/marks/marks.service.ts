@@ -65,6 +65,7 @@ export class MarksService {
         updatedBy: userId,
       },
       create: {
+        ...(data.id ? { id: data.id } : {}),
         sheetId: data.sheetId,
         studentId: data.studentId,
         score: data.score,

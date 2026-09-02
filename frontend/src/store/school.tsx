@@ -1,8 +1,10 @@
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from "react";
-import { pushSchoolSnapshot, pushMarkEntries, fetchSchoolSnapshot, fetchPendingConflicts, resolveRemoteConflict } from "@/lib/syncService";
+import { useSchoolDataQuery } from "@/lib/schoolDataClient";
+import { useInvalidateSchoolData } from "@/lib/schoolDataClient";
+import { api } from "@/lib/api";
 import { useAuth } from "@/store/auth";
 import { toast } from "sonner";
-import { getCurriculumGradeScale, normalizeCurriculumId } from "@/lib/schoolData";
+import { normalizeCurriculumId } from "@/lib/schoolData";
 
 export interface GradeBand {
   grade: string;
@@ -56,18 +58,18 @@ export interface StudentItem {
   classId: string;
   streamId: string;
   vap?: string;
+  guardianName?: string;
+  guardianPhone?: string;
+  guardianEmail?: string;
 }
 
 export interface ParentItem {
   id: string;
-  schoolId?: string;
   fullName: string;
   email?: string;
   relationship?: string;
   phoneNumbers: string[];
   studentIds: string[];
-  userId?: string | null;
-  createdBy?: string;
 }
 
 export interface ExamItem {
@@ -121,33 +123,6 @@ export interface TimetableItem {
   pending?: boolean;
 }
 
-export interface ConflictItem {
-  id: string;
-  entity: string;
-  entityId: string;
-  field: string;
-  server_value?: string;
-  incoming_value?: string;
-  incoming_by?: string;
-  incoming_device?: string;
-  status: string;
-  resolution?: string;
-  custom_value?: string;
-  created_at: string;
-  resolved_at?: string;
-  studentId?: string;
-  subjectId?: string;
-  examId?: string;
-  classId?: string;
-  streamId?: string;
-  deviceName?: string;
-  thisDeviceValue?: string;
-  otherDeviceValue?: string;
-  otherDeviceName?: string;
-  timestamp?: number;
-  editedBy?: string;
-}
-
 export interface SchoolSettings {
   schoolName: string;
   schoolTag: string;
@@ -175,13 +150,8 @@ export interface SchoolState {
   sheets: SheetItem[];
   entries: EntryItem[];
   timetable: TimetableItem[];
-  conflicts: any[];
   settings: SchoolSettings;
   online: boolean;
-  lastSyncAt: string | null;
-  syncQueue: string[];
-  deviceName: string;
-  deletedIds: string[];
 }
 
 interface SchoolContextValue {
@@ -190,18 +160,16 @@ interface SchoolContextValue {
   setActiveCurriculum: (id: string) => void;
   update: (fn: (s: SchoolState) => void, options?: { markDirty?: boolean }) => void;
   setMarkScore: (studentId: string, subjectId: string, raw: string) => void;
-  syncNow: () => void;
   upsertTimetableSlot: (slot: TimetableItem) => void;
   removeTimetableSlot: (id: string) => void;
-  resolveConflict: (id: string, resolution: string | undefined, customValue?: string | undefined) => void;
-  bulkResolveConflicts: (resolution: string) => void;
+  saveMarks: () => Promise<void>;
   saveDetails: () => Promise<void>;
 }
 
 const defaultState: SchoolState = {
   curricula: [
-    { id: "cbc", name: "CBC", shortName: "CBC", description: "Competency-Based Curriculum", gradingScale: getCurriculumGradeScale("cbc") },
-    { id: "844", name: "844", shortName: "844", description: "8-4-4 System", gradingScale: getCurriculumGradeScale("844") },
+    { id: "cbc", name: "CBC", shortName: "CBC", description: "Competency-Based Curriculum" },
+    { id: "844", name: "844", shortName: "844", description: "8-4-4 System" },
   ],
   activeCurriculum: "cbc",
   classes: [],
@@ -214,7 +182,6 @@ const defaultState: SchoolState = {
   sheets: [],
   entries: [],
   timetable: [],
-  conflicts: [],
   settings: {
     schoolName: "DRUMVALE SECONDARY SCHOOL",
     schoolTag: import.meta.env.VITE_SCHOOL_TAG ?? "Drumvale Academy - Academic Compass",
@@ -229,16 +196,12 @@ const defaultState: SchoolState = {
     academicYear: new Date().getFullYear(),
   },
   online: typeof navigator !== "undefined" ? navigator.onLine : true,
-  lastSyncAt: null,
-  syncQueue: [],
-  deviceName: "web",
-  deletedIds: [],
 };
 
 function cachedState(userId: string | undefined): SchoolState {
   if (!userId || typeof window === "undefined") return defaultState;
   try {
-    const cached = JSON.parse(localStorage.getItem(`ac_school_snapshot_${userId}`) || "null");
+    const cached = JSON.parse(localStorage.getItem(`ac_school_draft_${userId}`) || "null");
     return cached ? { ...defaultState, ...cached } : defaultState;
   } catch {
     return defaultState;
@@ -251,36 +214,32 @@ const Ctx = createContext<SchoolContextValue>({
   setActiveCurriculum: () => {},
   update: () => {},
   setMarkScore: () => {},
-  syncNow: () => {},
   upsertTimetableSlot: () => {},
   removeTimetableSlot: () => {},
-  resolveConflict: () => {},
-  bulkResolveConflicts: () => {},
+  saveMarks: async () => {},
   saveDetails: async () => {},
 });
 
 export function SchoolProvider({ children }: { children: ReactNode }) {
   const { session, loading: authLoading } = useAuth();
   const [state, setState] = useState<SchoolState>(() => cachedState(session?.user.id));
+  const schoolDataQuery = useSchoolDataQuery(!authLoading && !!session);
+  const invalidateSchoolData = useInvalidateSchoolData();
+  const stateRef = useRef(state);
   const localChangesRef = useRef(false);
+  stateRef.current = state;
 
   const cacheSnapshot = (userId: string | undefined, snapshot: unknown) => {
     if (!userId || typeof window === "undefined") return;
-    try { localStorage.setItem(`ac_school_snapshot_${userId}`, JSON.stringify(snapshot)); } catch (_e) {}
+    try { localStorage.setItem(`ac_school_draft_${userId}`, JSON.stringify(snapshot)); } catch (_e) {}
   };
-
-  useEffect(() => {
-    if (!session?.user.id || typeof window === "undefined") return;
-    cacheSnapshot(session.user.id, state);
-  }, [session?.user.id, state]);
 
   const update = useCallback((fn: (s: SchoolState) => void, options?: { markDirty?: boolean }) => {
     if (options?.markDirty !== false) localChangesRef.current = true;
-    setState((prev) => {
-      const next = { ...prev };
-      fn(next);
-      return next;
-    });
+    const next = { ...stateRef.current };
+    fn(next);
+    stateRef.current = next;
+    setState(next);
   }, []);
 
   const setActiveCurriculum = useCallback((id: string) => {
@@ -293,50 +252,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     setActiveCurriculum,
     update,
     setMarkScore: () => {},
-    syncNow: async () => {
-      try {
-        const queuedEntryIds = new Set(state.syncQueue);
-        const queuedEntries = state.entries.filter(e => queuedEntryIds.has(e.id));
-
-        if (queuedEntries.length === 0) {
-          toast.info("No changes to sync");
-          return;
-        }
-
-        const batchResults = await pushMarkEntries(
-          queuedEntries.map(entry => ({
-            id: entry.id,
-            curriculumId: state.curricula[0]?.id ?? "cbc",
-            sheetId: entry.sheetId,
-            studentId: entry.studentId,
-            score: entry.score,
-            version: 1,
-            deviceName: state.deviceName,
-          }))
-        );
-
-        const failed = batchResults.filter(result => result.status === "error");
-        if (failed.length > 0) {
-          throw new Error(`Failed to sync ${failed.length} mark ${failed.length > 1 ? "entries" : "entry"}`);
-        }
-
-        localChangesRef.current = false;
-        setState(prev => ({
-          ...prev,
-          lastSyncAt: new Date().toISOString(),
-          syncQueue: prev.syncQueue.filter(id => !queuedEntryIds.has(id)),
-          entries: prev.entries.map(entry => (
-            queuedEntryIds.has(entry.id) ? { ...entry, pending: false } : entry
-          )),
-        }));
-        toast.success(`Sync successful (${queuedEntries.length} entries)`);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Network or server error";
-        console.error("[Sync] Error:", message);
-        toast.error(`Sync failed: ${message}`);
-      }
-    },
-    upsertTimetableSlot: (slot: TimetableItem) => {
+    upsertTimetableSlot: async (slot: TimetableItem) => {
       setState(prev => {
         const next = { ...prev };
         const idx = next.timetable.findIndex(t => t.id === slot.id);
@@ -344,28 +260,48 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
         else next.timetable.push(slot);
         return next;
       });
-    },
-    removeTimetableSlot: (id: string) => {
-      setState(prev => ({ ...prev, timetable: prev.timetable.filter(t => t.id !== id) }));
-    },
-    resolveConflict: async (id: string, resolution: string | undefined, customValue?: string) => {
       try {
-        await resolveRemoteConflict(id, (resolution as any) || "server", customValue);
-        setState(prev => ({ ...prev, conflicts: prev.conflicts.map(c => c.id === id ? { ...c, status: "resolved", resolution: resolution ?? "server", customValue } : c) }));
-        toast.success("Conflict resolved");
-      } catch (err) {
-        toast.error("Failed to resolve conflict");
+        await api.post("/v2/timetable", {
+          id: slot.id,
+          classId: slot.classId,
+          streamId: slot.streamId,
+          dayOfWeek: slot.dayOfWeek,
+          period: slot.period,
+          startTime: slot.startTime ?? "",
+          endTime: slot.endTime ?? "",
+          subjectId: slot.subjectId,
+          teacherId: slot.teacherId,
+          room: slot.room,
+        });
+        invalidateSchoolData();
+      } catch (error) {
+        await schoolDataQuery.refetch();
+        toast.error(error instanceof Error ? error.message : "Failed to save timetable slot.");
       }
     },
-    bulkResolveConflicts: async (resolution: string) => {
-      const pending = state.conflicts.filter(c => c.status === "pending");
-      for (const c of pending) {
-        try {
-          await resolveRemoteConflict(c.id, resolution as any);
-        } catch {}
+    removeTimetableSlot: async (id: string) => {
+      setState(prev => ({ ...prev, timetable: prev.timetable.filter(t => t.id !== id) }));
+      try {
+        await api.delete(`/v2/timetable/${encodeURIComponent(id)}`);
+        invalidateSchoolData();
+      } catch (error) {
+        await schoolDataQuery.refetch();
+        toast.error(error instanceof Error ? error.message : "Failed to remove timetable slot.");
       }
-      setState(prev => ({ ...prev, conflicts: prev.conflicts.map(c => c.status === "pending" ? { ...c, status: "resolved", resolution } : c) }));
-      toast.success("Bulk conflict resolution submitted");
+    },
+    saveMarks: async () => {
+      const entries = stateRef.current.entries.filter((entry) => entry.pending);
+      if (!entries.length) return;
+      try {
+        await api.post("/v2/marks/batch", {
+          entries: entries.map((entry) => ({ id: entry.id, sheetId: entry.sheetId, studentId: entry.studentId, score: entry.score })),
+        });
+        setState(prev => ({ ...prev, entries: prev.entries.map(entry => entry.pending ? { ...entry, pending: false } : entry) }));
+        invalidateSchoolData();
+        toast.success(`${entries.length} mark${entries.length === 1 ? "" : "s"} saved`);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to save marks.");
+      }
     },
     saveDetails: async () => {
       if (!confirm("Save current details to server? This will push students, classes, subjects, teachers, exams, sheets and timetable.")) return;
@@ -386,7 +322,6 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
         saveToast = toast.loading("Saving details...");
         const snap = {
           students: state.students,
-          parents: state.parents,
           teachers: state.teachers,
           classes: state.classes,
           streams: state.streams,
@@ -399,17 +334,16 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
           settings: state.settings,
           classRemarks: [],
           principalRemarks: [],
-          deletedIds: state.deletedIds,
         };
-        const res = await pushSchoolSnapshot(snap);
-        if (res === "ok") {
-          localChangesRef.current = false;
-            cacheSnapshot(session?.user.id, snap);
-            setState(prev => ({ ...prev, lastSyncAt: new Date().toISOString(), syncQueue: [] }));
-            toast.success("Details saved", { id: saveToast });
-        } else {
-          toast.error("Failed to save details. Check your connection and sign-in status.", { id: saveToast });
+
+        if (typeof window !== "undefined" && session?.user.id) {
+          localStorage.setItem(`ac_school_draft_${session.user.id}`, JSON.stringify(snap));
         }
+
+        localChangesRef.current = false;
+        cacheSnapshot(session?.user.id, snap);
+        setState(prev => ({ ...prev }));
+        toast.success("Details saved locally", { id: saveToast });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to save details.";
         toast.error(message, { id: saveToast });
@@ -417,67 +351,38 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     },
   };
 
-  // listen to online/offline events and refresh conflicts when online
   useEffect(() => {
-    const onOnline = async () => {
+    const onOnline = () => {
       setState(prev => ({ ...prev, online: true }));
-      try {
-        const conflicts = await fetchPendingConflicts();
-        setState(prev => ({ ...prev, conflicts }));
-      } catch {}
     };
     const onOffline = () => setState(prev => ({ ...prev, online: false }));
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
-    const refreshFromServer = async () => {
-      if (localChangesRef.current || !navigator.onLine || !localStorage.getItem("ac_token")) return;
-      try {
-        const server = await fetchSchoolSnapshot();
-        if (server && !localChangesRef.current) {
-          cacheSnapshot(session?.user.id, server);
-          setState(prev => ({
-            ...prev,
-            students: server.students ?? prev.students,
-            parents: server.parents ?? prev.parents,
-            teachers: server.teachers ?? prev.teachers,
-            classes: server.classes ?? prev.classes,
-            streams: server.streams ?? prev.streams,
-            subjects: server.subjects ?? prev.subjects,
-            exams: server.exams ?? prev.exams,
-            sheets: server.sheets ?? prev.sheets,
-            entries: server.entries ?? prev.entries,
-            timetable: server.timetable ?? prev.timetable,
-            curricula: server.curricula ?? prev.curricula,
-            settings: server.settings ?? prev.settings,
-            deletedIds: server.deletedIds ?? prev.deletedIds,
-            lastSyncAt: new Date().toISOString(),
-          }));
-        }
-      } catch {}
-    };
-
-    if (state.online) {
-      (async () => {
-        try {
-          await refreshFromServer();
-          const conflicts = await fetchPendingConflicts();
-          setState(prev => ({ ...prev, conflicts }));
-        } catch {}
-      })();
-    }
-    const interval = window.setInterval(refreshFromServer, 5000);
-    const onFocus = () => { void refreshFromServer(); };
-    const onVisibilityChange = () => { if (document.visibilityState === "visible") void refreshFromServer(); };
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
-      window.clearInterval(interval);
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [authLoading, session?.token]);
+  }, [authLoading, session?.token, state.online]);
+
+  useEffect(() => {
+    const server = schoolDataQuery.data;
+    if (!server || localChangesRef.current) return;
+    cacheSnapshot(session?.user.id, server);
+    setState(prev => ({
+      ...prev,
+      students: server.students ?? prev.students,
+      teachers: server.teachers ?? prev.teachers,
+      classes: server.classes ?? prev.classes,
+      streams: server.streams ?? prev.streams,
+      subjects: server.subjects ?? prev.subjects,
+      exams: server.exams ?? prev.exams,
+      sheets: server.sheets ?? prev.sheets,
+      entries: server.entries ?? prev.entries,
+      timetable: server.timetable ?? prev.timetable,
+      curricula: server.curricula ?? prev.curricula,
+      settings: server.settings ?? prev.settings,
+    }));
+  }, [schoolDataQuery.data, session?.user.id]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

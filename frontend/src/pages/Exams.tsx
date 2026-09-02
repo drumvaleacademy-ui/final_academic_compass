@@ -139,7 +139,7 @@ export default function Exams() {
                   </select>
                 </td>
                 <td>
-                  <Button variant="ghost" size="icon" onClick={() => update(s => { s.exams = s.exams.filter(x => x.id !== ex.id); s.deletedIds = [...(s.deletedIds ?? []), ex.id]; })}>
+                  <Button variant="ghost" size="icon" onClick={() => update(s => { s.exams = s.exams.filter(x => x.id !== ex.id); })}>
                     <Trash2 className="h-4 w-4 text-destructive"/>
                   </Button>
                 </td>

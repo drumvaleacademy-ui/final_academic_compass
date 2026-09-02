@@ -22,7 +22,6 @@ import Exams from "./pages/Exams";
 import MarkSheets from "./pages/MarkSheets";
 import MarkEntry from "./pages/MarkEntry";
 import Marks from "./pages/Marks";
-import Conflicts from "./pages/Conflicts";
 import Transcripts from "./pages/Transcripts";
 import Reports from "./pages/Reports";
 import DataManagement from "./pages/DataManagement";
@@ -62,7 +61,6 @@ const App = () => (
                   <Route path="/entry" element={<MarkEntry />} />
                   <Route path="/marks" element={<Marks />} />
                   <Route path="/timetable" element={<Timetable />} />
-                  <Route path="/conflicts" element={<Conflicts />} />
                   <Route path="/transcripts" element={<Transcripts />} />
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/data" element={<DataManagement />} />

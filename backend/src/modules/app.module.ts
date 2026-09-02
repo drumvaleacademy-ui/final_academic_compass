@@ -17,8 +17,7 @@ import { SmsModule } from "./sms/sms.module";
 import { EmailModule } from "./email/email.module";
 import { AuditModule } from "./audit/audit.module";
 import { ImportsModule } from "./imports/imports.module";
-import { ConflictsModule } from "./conflicts/conflicts.module";
-import { SyncModule } from "./sync/sync.module";
+import { SchoolDataModule } from "./school-data/school-data.module";
 import { HealthModule } from "./health/health.module";
 
 @Module({
@@ -41,8 +40,7 @@ import { HealthModule } from "./health/health.module";
     EmailModule,
     AuditModule,
     ImportsModule,
-    ConflictsModule,
-    SyncModule,
+    SchoolDataModule,
     HealthModule,
   ],
 })

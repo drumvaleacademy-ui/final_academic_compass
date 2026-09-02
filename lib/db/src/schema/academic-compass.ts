@@ -45,22 +45,6 @@ export const timetableSlots = sqliteTable("ac_timetable_slots", {
   updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
 });
 
-export const syncConflicts = sqliteTable("ac_sync_conflicts", {
-  id: text("id").primaryKey().notNull(),
-  entity: text("entity").notNull(),
-  entityId: text("entity_id").notNull(),
-  field: text("field").notNull(),
-  serverValue: text("server_value"),
-  incomingValue: text("incoming_value"),
-  incomingBy: text("incoming_by"),
-  incomingDevice: text("incoming_device"),
-  status: text("status").default("pending").notNull(),
-  resolution: text("resolution"),
-  customValue: text("custom_value"),
-  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
-  resolvedAt: text("resolved_at"),
-});
-
 export const schoolData = sqliteTable("ac_school_data", {
   id: text("id").primaryKey().notNull().default("global"),
   data: text("data").notNull(),

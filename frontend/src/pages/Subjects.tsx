@@ -64,7 +64,7 @@ export default function Subjects() {
                   </select>
                 </td>
                 <td>
-                  <Button variant="ghost" size="icon" onClick={() => update(s => { s.subjects = s.subjects.filter(x => x.id !== sub.id); s.deletedIds = [...(s.deletedIds ?? []), sub.id]; })}>
+                  <Button variant="ghost" size="icon" onClick={() => update(s => { s.subjects = s.subjects.filter(x => x.id !== sub.id); })}>
                     <Trash2 className="h-4 w-4 text-destructive"/>
                   </Button>
                 </td>

@@ -47,29 +47,6 @@ CREATE TABLE IF NOT EXISTS ac_timetable_slots (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS ac_sync_conflicts (
-  id TEXT PRIMARY KEY,
-  entity TEXT NOT NULL,
-  entity_id TEXT NOT NULL,
-  field TEXT NOT NULL,
-  server_value TEXT,
-  incoming_value TEXT,
-  incoming_by TEXT,
-  incoming_device TEXT,
-  status TEXT NOT NULL DEFAULT 'pending',
-  resolution TEXT,
-  custom_value TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  resolved_at TEXT
-);
-
-CREATE TABLE IF NOT EXISTS ac_school_data (
-  id TEXT PRIMARY KEY DEFAULT 'global',
-  data TEXT NOT NULL,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
 CREATE INDEX IF NOT EXISTS idx_mark_entries_sheet_student ON ac_mark_entries(sheet_id, student_id);
 CREATE INDEX IF NOT EXISTS idx_mark_entries_student ON ac_mark_entries(student_id);
 CREATE INDEX IF NOT EXISTS idx_timetable_slots_class_stream ON ac_timetable_slots(class_id, stream_id, day_of_week, period);
-CREATE INDEX IF NOT EXISTS idx_sync_conflicts_status ON ac_sync_conflicts(status);

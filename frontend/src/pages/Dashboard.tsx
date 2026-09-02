@@ -9,7 +9,7 @@ import {
 } from "recharts";
 import {
   Users, BookOpen, ClipboardList,
-  AlertTriangle, TrendingUp, GitMerge, CheckCircle2,
+  AlertTriangle, TrendingUp, CheckCircle2,
 } from "lucide-react";
 import { belongsToCurriculum, statsForStudentExam } from "@/lib/schoolData";
 import { Link, useNavigate } from "react-router-dom";
@@ -38,7 +38,6 @@ export default function Dashboard() {
   const topPendingSheetId = [...sheetPendingCounts.entries()]
     .sort((a, b) => b[1] - a[1])[0]?.[0];
 
-  const conflicts = state.conflicts.filter(c => c.status === "pending").length;
   const latestExam = exams.find(e => e.status !== "draft");
   const subjectAvgData = useMemo(() => {
     if (!latestExam) return [];
@@ -70,7 +69,6 @@ export default function Dashboard() {
     { label: "Exams",           value: exams.length,    icon: ClipboardList,  tone: "accent" },
     { label: "Pending marks",   value: pendingMarks,    icon: AlertTriangle,  tone: "warning" },
     { label: "Weak areas",      value: weakAreas,       icon: TrendingUp,     tone: "destructive" },
-    { label: "Conflicts",       value: conflicts,       icon: GitMerge,       tone: "destructive" },
   ];
 
   return (
@@ -143,22 +141,11 @@ export default function Dashboard() {
         <Card className="p-4">
           <div className="text-sm font-medium mb-3">Attention needed</div>
           <ul className="space-y-2 text-sm">
-            {conflicts > 0 && (
-              <li className="flex items-center justify-between rounded-md border p-3">
-                <span className="flex items-center gap-2">
-                  <GitMerge className="h-4 w-4 text-destructive"/>
-                  {conflicts} sync conflict{conflicts > 1 ? "s" : ""} awaiting review
-                </span>
-                <Button asChild size="sm" variant="outline">
-                  <Link to="/conflicts">Resolve</Link>
-                </Button>
-              </li>
-            )}
             {pendingMarks > 0 && (
               <li className="flex items-center justify-between rounded-md border p-3">
                 <span className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-warning"/>
-                  {pendingMarks} pending mark entr{pendingMarks > 1 ? "ies" : "y"} awaiting sync
+                  {pendingMarks} pending mark entr{pendingMarks > 1 ? "ies" : "y"}
                 </span>
                 <Button
                   size="sm"
@@ -180,7 +167,7 @@ export default function Dashboard() {
                 </Button>
               </li>
             )}
-            {conflicts + pendingMarks + weakAreas === 0 && (
+            {pendingMarks + weakAreas === 0 && (
               <li className="text-sm text-muted-foreground flex items-center gap-2 p-2">
                 <CheckCircle2 className="h-4 w-4 text-success"/> All clear. Nice work.
               </li>

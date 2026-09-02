@@ -28,7 +28,7 @@ db.exec("PRAGMA foreign_keys = ON");
 const schema = fs.readFileSync(path.join(process.cwd(), "data", "schema.sql"), "utf8");
 db.exec(schema);
 
-const tables = ["ac_profiles", "ac_user_roles", "ac_mark_entries", "ac_timetable_slots", "ac_sync_conflicts", "ac_school_data"];
+const tables = ["ac_profiles", "ac_user_roles", "ac_mark_entries", "ac_timetable_slots"];
 
 for (const table of tables) {
   const rows = dump[table];

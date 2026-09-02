@@ -50,35 +50,6 @@ export interface TimetableSlot {
   pending?: boolean;
 }
 
-export interface SyncConflict {
-  id: string;
-  entity: string;
-  entityId: string;
-  field: string;
-  server_value?: string;
-  incoming_value?: string;
-  incoming_by?: string;
-  incoming_device?: string;
-  status: string;
-  resolution?: string;
-  custom_value?: string;
-  created_at: string;
-  resolved_at?: string;
-  studentId?: string;
-  subjectId?: string;
-  examId?: string;
-  classId?: string;
-  streamId?: string;
-  deviceName?: string;
-  thisDeviceValue?: string;
-  otherDeviceValue?: string;
-  otherDeviceName?: string;
-  timestamp?: number;
-  editedBy?: string;
-  serverValue?: string;
-  customValue?: string;
-}
-
 export interface GradeBand {
   grade: string;
   shortForm?: string;

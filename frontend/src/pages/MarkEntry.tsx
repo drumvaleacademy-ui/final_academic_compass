@@ -20,11 +20,9 @@ import * as XLSX from "xlsx";
 
 export default function MarkEntry() {
   const navigate = useNavigate();
-  const { state, activeCurriculum, update, setMarkScore, syncNow } = useSchool();
+  const { state, activeCurriculum, update, setMarkScore, saveMarks } = useSchool();
   const { isTeacher, isSeniorTeacher, isPrincipal, isHod, isReadOnly } = useAuth();
   const [params, setParams] = useSearchParams();
-  const stateRef = useRef(state);
-  stateRef.current = state;
 
   const canEnterMarks = isPrincipal || isSeniorTeacher || isTeacher || isHod;
 
@@ -161,7 +159,7 @@ export default function MarkEntry() {
             studentId: stu.id,
             score: null,
             updatedAt: Date.now(),
-            updatedBy: s.deviceName,
+            updatedBy: "local",
             pending: true,
           });
         }
@@ -216,7 +214,7 @@ export default function MarkEntry() {
           if (e) {
             e.score = null;
             e.updatedAt = Date.now();
-            e.updatedBy = s.deviceName;
+            e.updatedBy = "local",
             e.pending = true;
           }
         });
@@ -244,20 +242,18 @@ export default function MarkEntry() {
           studentId,
           score: n,
           updatedAt: Date.now(),
-          updatedBy: s.deviceName,
+          updatedBy: "local",
           pending: true,
         };
         s.entries.push(e);
       } else {
         e.score = n;
         e.updatedAt = Date.now();
-        e.updatedBy = s.deviceName;
+        e.updatedBy = "local",
         e.pending = true;
       }
-      if (!s.syncQueue.includes(e.id)) s.syncQueue.push(e.id);
     });
 
-    if (stateRef.current.online) syncNow();
   };
 
   const parseImportCsv = (raw: string): Array<{ admissionNo: string; score: number | null }> => {
@@ -342,24 +338,22 @@ export default function MarkEntry() {
               studentId: u.studentId,
               score: u.score,
               updatedAt: Date.now(),
-              updatedBy: s.deviceName,
+              updatedBy: "local",
               pending: true,
             };
             s.entries.push(e);
           } else {
             e.score = u.score;
             e.updatedAt = Date.now();
-            e.updatedBy = s.deviceName;
+            e.updatedBy = "local",
             e.pending = true;
           }
-          if (!s.syncQueue.includes(e.id)) s.syncQueue.push(e.id);
         });
         imported++;
       }
       toast.success(`Imported ${imported} mark${imported > 1 ? "s" : ""}`);
       setImportOpen(false);
       setImportText("");
-      if (stateRef.current.online) syncNow();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Import failed";
       toast.error(msg);
@@ -492,8 +486,8 @@ export default function MarkEntry() {
               {state.online ? <><Cloud className="h-3 w-3 mr-1"/>Online</> : <><CloudOff className="h-3 w-3 mr-1"/>Offline</>}
             </Badge>
             {pendingCount > 0 && <Badge className="bg-warning text-warning-foreground">{pendingCount} queued</Badge>}
-            <Button size="sm" disabled={!state.online || pendingCount === 0} onClick={syncNow}>
-              <Save className="h-4 w-4 mr-1"/>Sync now
+            <Button size="sm" disabled={pendingCount === 0} onClick={() => void saveMarks()}>
+              <Save className="h-4 w-4 mr-1"/>Save marks
             </Button>
           </div>
         }

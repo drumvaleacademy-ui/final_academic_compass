@@ -6,7 +6,7 @@ import { Download, Upload, Save, Database, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 export default function DataManagement() {
-  const { state, saveDetails, syncNow } = useSchool();
+  const { state, saveDetails } = useSchool();
 
   const exportLocalData = () => {
     const payload = {
@@ -22,7 +22,6 @@ export default function DataManagement() {
       sheets: state.sheets,
       entries: state.entries,
       timetable: state.timetable,
-      deletedIds: state.deletedIds,
     };
 
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -60,11 +59,10 @@ export default function DataManagement() {
           sheets: payload.sheets ?? state.sheets,
           entries: payload.entries ?? state.entries,
           timetable: payload.timetable ?? state.timetable,
-          deletedIds: payload.deletedIds ?? state.deletedIds,
           settings: { ...state.settings, ...(payload.school ?? {}) },
         };
 
-        localStorage.setItem(`ac_school_snapshot_${state.deviceName}`, JSON.stringify(next));
+        localStorage.setItem("ac_school_backup_import", JSON.stringify(next));
         window.location.reload();
         toast.success("Backup imported");
       } catch (error) {
@@ -80,7 +78,7 @@ export default function DataManagement() {
     <div>
       <PageHeader
         title="Data Management"
-        description="Keep the school data stable by saving locally, exporting backups, and uploading only validated payloads instead of using the fragile full snapshot sync path."
+        description="Manage validated backups separately from ordinary server data changes."
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -95,7 +93,7 @@ export default function DataManagement() {
           <p className="text-sm text-muted-foreground">
             {pendingCount > 0 ? `${pendingCount} entries still pending local save.` : "No local pending entries."}
           </p>
-          <Button onClick={() => syncNow()} className="w-full">Save local data</Button>
+          <Button onClick={() => saveDetails()} className="w-full">Save local data</Button>
         </Card>
 
         <Card className="p-5 space-y-4">
@@ -118,7 +116,7 @@ export default function DataManagement() {
               <p className="text-sm text-muted-foreground">Import a previously exported backup.</p>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground">This avoids the unstable full-school sync merge path.</p>
+          <p className="text-sm text-muted-foreground">Restore only when you intentionally need to replace local working data.</p>
           <Button variant="outline" onClick={importLocalData} className="w-full">Import backup</Button>
         </Card>
       </div>

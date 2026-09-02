@@ -28,7 +28,6 @@ model School {
   terms          Term[]
   timetableSlots TimetableSlot[]
   settings       SchoolSettings?
-  syncConflicts  SyncConflict[]
   users          User[]
 
   @@map("schools")
@@ -343,26 +342,6 @@ model SmsLog {
   sentAt     DateTime @default(now())
   school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   @@map("sms_logs")
-}
-
-model SyncConflict {
-  id             String    @id @default(uuid())
-  entity         String
-  entityId       String
-  field          String
-  serverValue    String?
-  incomingValue  String?
-  incomingBy     String?
-  incomingDevice String?
-  status         String    @default("pending")
-  resolution     String?
-  customValue    String?
-  createdAt      DateTime  @default(now())
-  resolvedAt     DateTime?
-  schoolId       String
-  school         School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-
-  @@map("sync_conflicts")
 }
 
 model ActivationToken {

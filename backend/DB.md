@@ -10,15 +10,13 @@ The canonical schema is in `db-schema.sql`. The application also creates tables 
 - `ac_user_roles` - user role assignments
 - `ac_mark_entries` - mark/exam entries
 - `ac_timetable_slots` - timetable slots
-- `ac_sync_conflicts` - sync conflicts
-- `ac_school_data` - school snapshot data
+- `ac_school_data` - legacy local data table; server-authoritative application data uses PostgreSQL
 
 ### Indexes
 
 - `idx_mark_entries_sheet_student` on `ac_mark_entries(sheet_id, student_id)`
 - `idx_mark_entries_student` on `ac_mark_entries(student_id)`
 - `idx_timetable_slots_class_stream` on `ac_timetable_slots(class_id, stream_id, day_of_week, period)`
-- `idx_sync_conflicts_status` on `ac_sync_conflicts(status)`
 
 ## Seed / Import
 

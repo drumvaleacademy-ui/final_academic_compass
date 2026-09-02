@@ -65,8 +65,8 @@ export default function Students() {
     if (!canManageStudents) { toast.error("Only the Principal or Senior Teacher can remove learners"); return; }
     const target = deleteTarget;
     try {
-      await api.delete(`/v2/sync/entity/student/${encodeURIComponent(target.id)}`);
-      update(st => { st.students = st.students.filter(x => x.id !== target.id); st.deletedIds = (st.deletedIds ?? []).filter(id => id !== target.id); }, { markDirty: false });
+      await api.delete(`/v2/students/${encodeURIComponent(target.id)}`);
+      update(st => { st.students = st.students.filter(x => x.id !== target.id); }, { markDirty: false });
       toast.success("Student permanently deleted from the database.");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Could not delete student.");

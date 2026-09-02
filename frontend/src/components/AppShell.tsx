@@ -1,11 +1,12 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, GraduationCap, BookOpen, UserSquare, ClipboardList,
-  FileSpreadsheet, PencilLine, GitMerge, LineChart, Printer, Settings,
+  FileSpreadsheet, PencilLine, LineChart, Printer, Settings,
   Wifi, WifiOff, Database, User, LogOut, CalendarDays, Menu, ChevronDown,
 } from "lucide-react";
 import { useState } from "react";
 import { useSchool } from "@/store/school";
+import { useInvalidateSchoolData } from "@/lib/schoolDataClient";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { SchoolLogoIcon } from "@/components/SchoolLogo";
@@ -29,7 +30,6 @@ const NAV = [
   { to: "/entry",      label: "Mark Entry",       icon: PencilLine },
   { to: "/marks",      label: "Exam Marks",        icon: FileSpreadsheet },
   { to: "/timetable",  label: "Timetable",        icon: CalendarDays },
-  { to: "/conflicts",  label: "Conflicts",        icon: GitMerge },
   { to: "/transcripts",label: "Transcripts",      icon: LineChart },
   { to: "/reports",    label: "Report Forms",     icon: Printer },
   { to: "/data",       label: "Data Management",  icon: Database },
@@ -58,7 +58,6 @@ const PAGE_BG: Record<string, string> = {
   "/entry": "page-bg-entry",
   "/marks": "page-bg-marks",
   "/timetable": "page-bg-timetable",
-  "/conflicts": "page-bg-conflicts",
   "/transcripts": "page-bg-transcripts",
   "/reports": "page-bg-reports",
   "/settings": "page-bg-settings",
@@ -82,19 +81,18 @@ const MORE_LINKS = [
   { to: "/exams", label: "Exams", icon: ClipboardList },
   { to: "/sheets", label: "Mark Sheets", icon: FileSpreadsheet },
   { to: "/marks", label: "Exam Marks", icon: FileSpreadsheet },
-  { to: "/conflicts", label: "Conflicts", icon: GitMerge },
   { to: "/transcripts", label: "Transcripts", icon: LineChart },
   { to: "/settings", label: "Settings", icon: Settings },
   { to: "/profile", label: "My Profile", icon: User },
 ];
 
 export default function AppShell() {
-  const { state, activeCurriculum, setActiveCurriculum, syncNow } = useSchool();
+  const { state, activeCurriculum, setActiveCurriculum } = useSchool();
+  const invalidateSchoolData = useInvalidateSchoolData();
   const { user, signOut, isPrincipal, isSeniorTeacher, isTeacher, canManageStaff } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const pending   = state.entries.filter(e => e.pending).length;
-  const conflicts = state.conflicts.filter(c => c.status === "pending").length;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -138,9 +136,6 @@ export default function AppShell() {
           >
             <n.icon className="h-4 w-4 opacity-90" />
             <span className="flex-1">{n.label}</span>
-            {n.to === "/conflicts" && conflicts > 0 && (
-              <span className="text-[10px] rounded-full bg-destructive text-destructive-foreground px-1.5 py-0.5 font-semibold">{conflicts}</span>
-            )}
             {n.to === "/entry" && pending > 0 && (
               <span className="text-[10px] rounded-full bg-warning text-warning-foreground px-1.5 py-0.5 font-semibold">{pending}</span>
             )}
@@ -286,7 +281,7 @@ export default function AppShell() {
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {state.online ? "Connected to network" : "No network connection — changes will sync when reconnected"}
+                      {state.online ? "Connected to server" : "No network connection"}
                 </TooltipContent>
               </Tooltip>
 
@@ -299,11 +294,11 @@ export default function AppShell() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={syncNow}
+                onClick={invalidateSchoolData}
                 className="hidden sm:inline-flex"
-                title="Save current data locally"
+                title="Refresh server data"
               >
-                <Database className="h-4 w-4 mr-1"/> Save local
+                <Database className="h-4 w-4 mr-1"/> Refresh data
               </Button>
 
               <div className="h-4 w-px bg-border mx-1 hidden md:block" />

@@ -68,7 +68,7 @@ export default function Timetable() {
     if (!canEditTimetable) { toast.error("Only Senior Teacher or Principal can edit"); return; }
     upsertTimetableSlot(editing);
     setOpen(false);
-    toast.success("Slot saved (syncing)");
+    toast.success("Slot saved");
   };
 
   const remove = () => {
@@ -98,7 +98,7 @@ export default function Timetable() {
       <PageHeader
         title="Timetable"
         description={canEditTimetable
-          ? "You can edit this timetable. Changes sync to all devices."
+          ? "You can edit this timetable. Changes are saved to the server."
           : "View-only. Only Senior Teacher or Principal can edit."}
         actions={
           <div className="flex items-center gap-2">
@@ -135,7 +135,7 @@ export default function Timetable() {
         </Select>
         <div className="flex items-center text-xs text-muted-foreground gap-2">
           <CalendarDays className="h-4 w-4"/>
-          {filteredSlots.length} slot{filteredSlots.length===1?"":"s"} · {(state.timetable ?? []).filter(t => t.pending).length} pending sync
+          {filteredSlots.length} slot{filteredSlots.length===1?"":"s"}
         </div>
       </Card>
 
@@ -169,7 +169,6 @@ export default function Timetable() {
                             <div className="font-semibold text-sm">{subject?.name ?? "—"}</div>
                             <div className="text-muted-foreground">{teacher?.name ?? "Unassigned"}</div>
                             {slot.room && <div className="text-[10px]">Room {slot.room}</div>}
-                            {slot.pending && <Badge variant="outline" className="mt-1 text-[10px] border-warning text-warning-foreground">pending sync</Badge>}
                           </>
                         ) : (
                           <span className="text-muted-foreground inline-flex items-center gap-1">

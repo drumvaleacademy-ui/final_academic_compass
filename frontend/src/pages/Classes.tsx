@@ -45,7 +45,10 @@ export default function Classes() {
     if (!pendingDelete) return;
     const target = pendingDelete;
     try {
-      await api.delete(`/v2/sync/entity/${target.entity}/${encodeURIComponent(target.id)}`);
+      const path = target.entity === "class"
+        ? `/v2/classes/${encodeURIComponent(target.id)}`
+        : `/v2/classes/${encodeURIComponent(state.classes.find(item => state.streams.some(stream => stream.id === target.id && stream.classId === item.id))?.id ?? "")}/streams/${encodeURIComponent(target.id)}`;
+      await api.delete(path);
       update(s => {
         if (target.entity === "class") {
           s.classes = s.classes.filter(item => item.id !== target.id);
@@ -53,7 +56,6 @@ export default function Classes() {
         } else {
           s.streams = s.streams.filter(item => item.id !== target.id);
         }
-        s.deletedIds = (s.deletedIds ?? []).filter(item => item !== target.id);
       }, { markDirty: false });
       toast.success(`${target.entity === "class" ? "Class" : "Stream"} deleted permanently.`);
     } catch (err: unknown) {
@@ -126,7 +128,7 @@ export default function Classes() {
       return;
     }
     try {
-      await api.post("/v2/sync/students", { students: imported });
+      await api.post("/v2/students/import", { students: imported });
       update(s => { s.students.push(...imported); }, { markDirty: false });
       toast.success(`${imported.length} student${imported.length === 1 ? "" : "s"} extracted and saved to ${target.label}.`);
       setExtractRows(null);

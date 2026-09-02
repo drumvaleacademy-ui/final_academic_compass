@@ -25,6 +25,7 @@ import Marks from "./pages/Marks";
 import Conflicts from "./pages/Conflicts";
 import Transcripts from "./pages/Transcripts";
 import Reports from "./pages/Reports";
+import DataManagement from "./pages/DataManagement";
 import SettingsPage from "./pages/Settings";
 import Timetable from "./pages/TimeTable";
 import Profile from "./pages/Profile";
@@ -64,6 +65,7 @@ const App = () => (
                   <Route path="/conflicts" element={<Conflicts />} />
                   <Route path="/transcripts" element={<Transcripts />} />
                   <Route path="/reports" element={<Reports />} />
+                  <Route path="/data" element={<DataManagement />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/profile" element={<Profile />} />
                 </Route>

@@ -2,7 +2,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, GraduationCap, BookOpen, UserSquare, ClipboardList,
   FileSpreadsheet, PencilLine, GitMerge, LineChart, Printer, Settings,
-  Wifi, WifiOff, RefreshCw, User, LogOut, CalendarDays, Menu, ChevronDown,
+  Wifi, WifiOff, Database, User, LogOut, CalendarDays, Menu, ChevronDown,
 } from "lucide-react";
 import { useState } from "react";
 import { useSchool } from "@/store/school";
@@ -32,6 +32,7 @@ const NAV = [
   { to: "/conflicts",  label: "Conflicts",        icon: GitMerge },
   { to: "/transcripts",label: "Transcripts",      icon: LineChart },
   { to: "/reports",    label: "Report Forms",     icon: Printer },
+  { to: "/data",       label: "Data Management",  icon: Database },
   { to: "/settings",   label: "Settings",         icon: Settings },
   { to: "/profile",    label: "My Profile",       icon: User },
 ];
@@ -295,16 +296,15 @@ export default function AppShell() {
                 </Badge>
               )}
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button size="sm" variant="outline" onClick={syncNow} disabled={!state.online || pending === 0} className="hidden sm:inline-flex">
-                    <RefreshCw className="h-4 w-4 mr-1"/> Sync
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {state.lastSyncAt ? `Last sync ${new Date(state.lastSyncAt).toLocaleTimeString()}` : "Never synced"}
-                </TooltipContent>
-              </Tooltip>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={syncNow}
+                className="hidden sm:inline-flex"
+                title="Save current data locally"
+              >
+                <Database className="h-4 w-4 mr-1"/> Save local
+              </Button>
 
               <div className="h-4 w-px bg-border mx-1 hidden md:block" />
 

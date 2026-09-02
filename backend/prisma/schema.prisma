@@ -213,6 +213,9 @@ model Student {
   fullName    String
   gender      String
   dateOfBirth DateTime?
+  guardianName String?
+  guardianPhone String?
+  guardianEmail String?
   classId     String
   streamId    String
   isActive    Boolean         @default(true)

@@ -35,7 +35,7 @@ export default function Students() {
   const [classFilter, setClassFilter] = useState<string>("all");
   const [streamFilter, setStreamFilter] = useState<string>("all");
   const fileRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<{ admissionNo: string; name: string }[] | null>(null);
+  const [preview, setPreview] = useState<{ admissionNo: string; name: string; guardianName?: string; guardianPhone?: string; guardianEmail?: string }[] | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; admissionNo: string } | null>(null);
   const classes = state.classes.filter(c => belongsToCurriculum(c.curriculumId, activeCurriculum));
   const streams = state.streams.filter(s => classFilter === "all" || s.classId === classFilter);
@@ -87,6 +87,9 @@ export default function Students() {
         Class: cls?.name || "",
         Stream: stream?.name || "",
         VAP: s.vap || "",
+        GuardianName: s.guardianName || "",
+        GuardianPhone: s.guardianPhone || "",
+        GuardianEmail: s.guardianEmail || "",
       };
     });
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -102,7 +105,7 @@ export default function Students() {
     if (!file) return;
     const name = file.name.toLowerCase();
     try {
-      let rows: { admissionNo: string; name: string }[] = [];
+      let rows: { admissionNo: string; name: string; guardianName?: string; guardianPhone?: string; guardianEmail?: string }[] = [];
 
       if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
         const data = new Uint8Array(await file.arrayBuffer());
@@ -153,11 +156,18 @@ export default function Students() {
       const header = firstRow.map((cell: any) => String(cell ?? "").trim().toLowerCase());
       const admissionIdx = header.findIndex((h) => /admission|adm|student\s*id|learner\s*id|pupil\s*id/.test(h));
       const nameIdx = header.findIndex((h) => /^(full\s*)?name(s)?$|student\s*name(s)?|learner\s*name(s)?|pupil\s*name(s)?/.test(h));
+      const findColumn = (pattern: RegExp) => header.findIndex((h) => pattern.test(h.replace(/[\s._-]/g, "")));
+      const guardianNameIdx = findColumn(/guardianname|parentname|contactname/);
+      const guardianPhoneIdx = findColumn(/guardianphone|parentphone|contactphone|phone|mobile/);
+      const guardianEmailIdx = findColumn(/guardianemail|parentemail|contactemail|email/);
       return rawRows.slice(1).map((row: any) => {
         const cells = Array.isArray(row) ? row : [];
         return {
           admissionNo: String(cells[admissionIdx] ?? cells[0] ?? "").trim(),
           name: String(cells[nameIdx] ?? cells[1] ?? "").trim(),
+          guardianName: guardianNameIdx >= 0 ? String(cells[guardianNameIdx] ?? "").trim() : "",
+          guardianPhone: guardianPhoneIdx >= 0 ? String(cells[guardianPhoneIdx] ?? "").trim() : "",
+          guardianEmail: guardianEmailIdx >= 0 ? String(cells[guardianEmailIdx] ?? "").trim() : "",
         };
       });
     }
@@ -169,8 +179,8 @@ export default function Students() {
       const firstLooksLikeName = NAME_PATTERN.test(first);
       const secondLooksLikeName = NAME_PATTERN.test(second);
       return firstLooksLikeName && !secondLooksLikeName
-        ? { admissionNo: second, name: first }
-        : { admissionNo: first, name: second };
+        ? { admissionNo: second, name: first, guardianName: String(cells[2] ?? "").trim(), guardianPhone: String(cells[3] ?? "").trim(), guardianEmail: String(cells[4] ?? "").trim() }
+        : { admissionNo: first, name: second, guardianName: String(cells[2] ?? "").trim(), guardianPhone: String(cells[3] ?? "").trim(), guardianEmail: String(cells[4] ?? "").trim() };
     });
   };
 
@@ -234,6 +244,9 @@ export default function Students() {
           admissionNo: row.admissionNo || `IMP/${s.settings.academicYear}/${Date.now()}-${index}`,
           name: row.name || "New Student",
           gender: "M",
+          guardianName: row.guardianName || "",
+          guardianPhone: row.guardianPhone || "",
+          guardianEmail: row.guardianEmail || "",
           classId,
           streamId,
           vap: "",
@@ -295,7 +308,7 @@ export default function Students() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>Adm. No.</th><th>Name</th><th>Gender</th><th>Class</th><th>Stream</th><th>VAP</th>
+              <th>Adm. No.</th><th>Name</th><th>Gender</th><th>Class</th><th>Stream</th><th>VAP</th><th>Guardian name</th><th>Guardian phone</th><th>Guardian email</th>
               {canManageStudents && <th></th>}
             </tr>
           </thead>
@@ -337,6 +350,12 @@ export default function Students() {
                     <input className="inline-edit w-full text-xs" value={s.vap} disabled={!canManageStudents}
                       onChange={(e) => update(st => { const x = st.students.find(x => x.id === s.id); if (x) x.vap = e.target.value; })} />
                   </td>
+                  <td><input className="inline-edit w-40 text-xs" value={s.guardianName || ""} disabled={!canManageStudents}
+                    onChange={(e) => update(st => { const x = st.students.find(x => x.id === s.id); if (x) x.guardianName = e.target.value; })} /></td>
+                  <td><input className="inline-edit w-36 text-xs" value={s.guardianPhone || ""} disabled={!canManageStudents}
+                    onChange={(e) => update(st => { const x = st.students.find(x => x.id === s.id); if (x) x.guardianPhone = e.target.value; })} /></td>
+                  <td><input className="inline-edit w-48 text-xs" value={s.guardianEmail || ""} disabled={!canManageStudents}
+                    onChange={(e) => update(st => { const x = st.students.find(x => x.id === s.id); if (x) x.guardianEmail = e.target.value; })} /></td>
                   {canManageStudents && (
                     <td>
                       <Button size="icon" variant="ghost" aria-label={`Delete ${s.name}`} onClick={() => setDeleteTarget({ id: s.id, name: s.name, admissionNo: s.admissionNo })}>
@@ -348,7 +367,7 @@ export default function Students() {
               );
             })}
             {students.length === 0 && (
-              <tr><td colSpan={canManageStudents ? 7 : 6} className="text-center text-muted-foreground py-8">No students match filters</td></tr>
+              <tr><td colSpan={canManageStudents ? 10 : 9} className="text-center text-muted-foreground py-8">No students match filters</td></tr>
             )}
           </tbody>
         </table>

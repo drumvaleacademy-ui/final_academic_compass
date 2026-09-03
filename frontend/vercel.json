@@ -3,5 +3,11 @@
   "framework": null,
   "installCommand": "pnpm install --frozen-lockfile --ignore-scripts --filter @workspace/academic-compass...",
   "buildCommand": "pnpm run build",
-  "outputDirectory": "dist/public"
+  "outputDirectory": "dist/public",
+  "rewrites": [
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
+    }
+  ]
 }

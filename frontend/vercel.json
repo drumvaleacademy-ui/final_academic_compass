@@ -6,6 +6,10 @@
   "outputDirectory": "dist/public",
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "https://final-academic-compass-backend.vercel.app/api/:path*"
+    },
+    {
       "source": "/:path*",
       "destination": "/index.html"
     }

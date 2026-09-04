@@ -28,8 +28,9 @@ async function request<T>(
 ): Promise<T> {
   const token = localStorage.getItem("ac_token");
   const hadToken = !!token;
+  const url = `${BASE}${path}`;
   try {
-    const res = await fetch(`${BASE}${path}`, {
+    const res = await fetch(url, {
       method,
       headers: {
         "Content-Type": "application/json",
@@ -65,9 +66,8 @@ async function request<T>(
   } catch (err) {
     if (isNetworkError(err)) {
       throw new Error(
-        `Cannot reach the server at ${API_ORIGIN || window.location.origin}. ` +
-        "If you are in production, set API_ORIGIN or VITE_API_ORIGIN to your deployed API URL. " +
-        "If you are in development, make sure the API server is running."
+        `The request to ${url} could not be completed. ` +
+        "Check the API URL, deployment rewrite, CORS configuration, and network connection."
       );
     }
     throw err;

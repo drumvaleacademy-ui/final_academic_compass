@@ -45,8 +45,16 @@ export class MarksService {
     sheetId: string;
     studentId: string;
     score: number | null;
+    sheet?: {
+      id: string;
+      curriculumId?: string;
+      examId: string;
+      classId: string;
+      streamId: string;
+      subjectId: string;
+    };
   }) {
-    const sheet = await this.prisma.db.markSheet.findFirst({
+    let sheet = await this.prisma.db.markSheet.findFirst({
       where: {
         id: data.sheetId,
         exam: { schoolId },
@@ -55,7 +63,39 @@ export class MarksService {
     });
 
     if (!sheet) {
-      throw new NotFoundException("Mark sheet not found");
+      if (!data.sheet || data.sheet.id !== data.sheetId) {
+        throw new NotFoundException("Mark sheet not found");
+      }
+
+      const [exam, classItem, stream, subject] = await Promise.all([
+        this.prisma.db.exam.findFirst({ where: { id: data.sheet.examId, schoolId } }),
+        this.prisma.db.class.findFirst({ where: { id: data.sheet.classId, schoolId } }),
+        this.prisma.db.stream.findFirst({ where: { id: data.sheet.streamId, class: { schoolId } } }),
+        this.prisma.db.subject.findFirst({ where: { id: data.sheet.subjectId, schoolId } }),
+      ]);
+      if (!exam || !classItem || !stream || !subject) {
+        throw new NotFoundException("Mark sheet references invalid school data");
+      }
+
+      sheet = await this.prisma.db.markSheet.create({
+        data: {
+          id: data.sheet.id,
+          curriculumId: data.sheet.curriculumId || "cbc",
+          examId: data.sheet.examId,
+          classId: data.sheet.classId,
+          streamId: data.sheet.streamId,
+          subjectId: data.sheet.subjectId,
+          teacherId: userId,
+        },
+        include: { exam: true },
+      });
+    }
+
+    const student = await this.prisma.db.student.findFirst({
+      where: { id: data.studentId, schoolId },
+    });
+    if (!student) {
+      throw new NotFoundException("Student not found");
     }
 
     const entry = await this.prisma.db.markEntry.upsert({

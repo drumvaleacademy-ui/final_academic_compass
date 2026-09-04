@@ -300,7 +300,23 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
       if (!entries.length) return;
       try {
         const result = await api.post<{ results: Array<{ id?: string; status: "ok" | "error" }> }>("/v2/marks/batch", {
-          entries: entries.map((entry) => ({ id: entry.id, sheetId: entry.sheetId, studentId: entry.studentId, score: entry.score })),
+          entries: entries.map((entry) => {
+            const sheet = stateRef.current.sheets.find((item) => item.id === entry.sheetId);
+            return {
+              id: entry.id,
+              sheetId: entry.sheetId,
+              studentId: entry.studentId,
+              score: entry.score,
+              sheet: sheet ? {
+                id: sheet.id,
+                curriculumId: sheet.curriculumId,
+                examId: sheet.examId,
+                classId: sheet.classId,
+                streamId: sheet.streamId,
+                subjectId: sheet.subjectId,
+              } : undefined,
+            };
+          }),
         });
         const successfulIds = new Set((result.results ?? []).filter((item) => item.status === "ok" && item.id).map((item) => item.id));
         setState(prev => ({ ...prev, entries: prev.entries.map(entry => successfulIds.has(entry.id) ? { ...entry, pending: false } : entry) }));
